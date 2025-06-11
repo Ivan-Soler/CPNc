@@ -3,7 +3,7 @@
 
 #include"../include/macro.h"
 
-#include<openssl/md5.h>
+#include</opt/openssl/openssl-1.1.1w/include/openssl/md5.h>
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
@@ -41,6 +41,24 @@ void init_conf(Conf *GC,
        }
      }
 
+	#ifdef GAUGE_FIX
+  	err=posix_memalign((void**) &(GC->gauge), (size_t) DOUBLE_ALIGN, (size_t) param->d_volume * sizeof(double complex));
+  	if(err!=0)
+  	{
+  		fprintf(stderr, "Problems in allocating the lattice! (%s, %d)\n", __FILE__, __LINE__);
+  		exit(EXIT_FAILURE);
+  	}
+  	for (r=0; r<(param->d_volume); r++)
+  	{
+  		err=posix_memalign((void**)&(GC->gauge[r]), (size_t) DOUBLE_ALIGN, (size_t )STDIM * sizeof(double complex));
+  		     if(err!=0)
+  		       {
+  		       fprintf(stderr, "Problems in allocating the lattice! (%s, %d)\n", __FILE__, __LINE__);
+  		       exit(EXIT_FAILURE);
+  		       }
+  		     }
+	#endif
+
   err=posix_memalign((void**) &(GC->phi), (size_t) DOUBLE_ALIGN, (size_t) param->d_volume * sizeof(Vec));
   if(err!=0)
     {
@@ -68,10 +86,12 @@ void init_conf(Conf *GC,
        {
        rand_rot_Vec(&v2, &v1, 0.05);
        equal_Vec(&(GC->phi[r]), &v2);
+       //GC->gauge[r]=1;
 
        for(j=0; j<STDIM; j++)
           {
           theta=0.05*(2.0*casuale()-1.0);
+    	  //theta=0;
           GC->lambda[r][j]=cos(theta)+I*sin(theta);
           }
        }
@@ -87,6 +107,8 @@ void init_conf(Conf *GC,
        {
        rand_vec_Vec(&v1);
        equal_Vec(&(GC->phi[r]), &v1);
+       //theta=PI*(2.0*casuale()-1.0);
+       //GC->gauge[r]=cos(theta)+I*sin(theta);
 
        for(j=0; j<STDIM; j++)
           {
@@ -100,6 +122,7 @@ void init_conf(Conf *GC,
     {
     read_conf(GC, param);
     }
+
 
   #ifdef LINKS_FIXED_TO_ONE
     for(r=0; r<(param->d_volume); r++)
@@ -119,7 +142,21 @@ void init_conf(Conf *GC,
   #endif
   }
 
-
+void restart_gauge_conf(Conf *GC,
+               GParam const * const param)
+{
+	int r;
+	double theta;
+	{
+	for(r=0; r<(param->d_volume); r++)
+	   {
+	    //theta=PI*(2.0*casuale()-1.0);
+		theta=0.05*(2.0*casuale()-1.0);
+	    GC->gauge[r]=cos(theta)+I*sin(theta);
+	    //GC->gauge[r]=1;
+		}
+	 }
+}
 
 void read_conf(Conf *GC, GParam const * const param)
   {
@@ -237,6 +274,26 @@ void free_conf(Conf *GC, GParam const * const param)
 
   free(GC->Qh);
   }
+
+void equal_conf(Conf const * const GC, Conf *GC2,
+					GParam const * const param)
+{
+	long r;
+	int i;
+
+	GC2->update_index=GC->update_index;
+
+	for(r=0; r<param->d_volume; r++)
+	{
+		equal_Vec(&GC2->phi[r], &GC->phi[r]);
+		GC2->gauge[r]=GC->gauge[r];
+
+		for(i=0; i<STDIM; i++)
+		{
+			GC2->lambda[r][i]=GC->lambda[r][i];
+		}
+	}
+}
 
 
 // save a configuration in ILDG-like format

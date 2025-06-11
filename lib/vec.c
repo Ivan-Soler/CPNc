@@ -44,6 +44,7 @@ void times_equal_real_Vec(Vec * restrict A, double r);
 void times_equal_complex_Vec(Vec * restrict A, double complex c);
 
 
+
 // l2 norm
 double norm_Vec(Vec const * const restrict A);
 

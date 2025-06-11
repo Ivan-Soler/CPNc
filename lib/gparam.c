@@ -173,6 +173,69 @@ void readinput(char *in_file, GParam *param)
                     }
                   param->d_measevery=temp_i;
                   }
+
+//#ifdef GAUGE_FIX
+           else if(strncmp(str, "quench_gamma", 12)==0)
+                  {
+                  err=fscanf(input, "%lf", &temp_d);
+                  if(err!=1)
+                    {
+                    fprintf(stderr, "Error in reading the file %s (%s, %d)\n", in_file, __FILE__, __LINE__);
+                    exit(EXIT_FAILURE);
+                    }
+                  param->d_quench_gamma=temp_d;
+                  }
+           else if(strncmp(str, "quench_epsilon_metro", 12)==0)
+                             {
+                             err=fscanf(input, "%lf", &temp_d);
+                             if(err!=1)
+                               {
+                               fprintf(stderr, "Error in reading the file %s (%s, %d)\n", in_file, __FILE__, __LINE__);
+                               exit(EXIT_FAILURE);
+                               }
+                             param->d_quench_epsilon_metro=temp_d;
+                             }
+           else if(strncmp(str, "quench_sample", 13)==0)
+                  {
+                  err=fscanf(input, "%d", &temp_i);
+                  if(err!=1)
+                    {
+                    fprintf(stderr, "Error in reading the file %s (%s, %d)\n", in_file, __FILE__, __LINE__);
+                    exit(EXIT_FAILURE);
+                    }
+                  param->d_quench_sample=temp_i;
+                  }
+           else if(strncmp(str, "quench_thermal", 14)==0)
+                  {
+                  err=fscanf(input, "%d", &temp_i);
+                  if(err!=1)
+                    {
+                    fprintf(stderr, "Error in reading the file %s (%s, %d)\n", in_file, __FILE__, __LINE__);
+                    exit(EXIT_FAILURE);
+                    }
+                  param->d_quench_thermal=temp_i;
+                  }
+           else if(strncmp(str, "quench_measevery", 16)==0)
+                  {
+                  err=fscanf(input, "%d", &temp_i);
+                  if(err!=1)
+                    {
+                    fprintf(stderr, "Error in reading the file %s (%s, %d)\n", in_file, __FILE__, __LINE__);
+                    exit(EXIT_FAILURE);
+                    }
+                  param->d_quench_measevery=temp_i;
+                  }
+           else if(strncmp(str, "quench_overrelax", 17)==0)
+                             {
+                             err=fscanf(input, "%d", &temp_i);
+                             if(err!=1)
+                               {
+                               fprintf(stderr, "Error in reading the file %s (%s, %d)\n", in_file, __FILE__, __LINE__);
+                               exit(EXIT_FAILURE);
+                               }
+                             param->d_quench_overrelax=temp_i;
+                             }
+           //#endif
           
            else if(strncmp(str, "start", 5)==0)
                   { 
@@ -357,7 +420,8 @@ void print_parameters(GParam const * const param,
                       time_t time_end,
                       double acc_site,
                       double acc_link,
-                      double acc_link_big)
+                      double acc_link_big,
+					  double quench_acc)
 
     {
     FILE *fp;
@@ -410,6 +474,14 @@ void print_parameters(GParam const * const param,
     fprintf(fp, "measevery: %d\n", param->d_measevery);
     fprintf(fp, "\n");
 
+	#ifdef GAUGE_FIX
+      fprintf(fp, "quench_gamma:     %.10lf\n", param->d_quench_gamma);
+      fprintf(fp, "quench_sample:    %d\n", param->d_quench_sample);
+      fprintf(fp, "quench_thermal:   %d\n", param->d_quench_thermal);
+      fprintf(fp, "quench_measevery: %d\n", param->d_quench_measevery);
+      fprintf(fp, "\n");
+    #endif
+
     fprintf(fp, "start:                   %d\n", param->d_start);
     fprintf(fp, "saveconf_back_every:     %d\n", param->d_saveconf_back_every);
     fprintf(fp, "\n");
@@ -421,6 +493,13 @@ void print_parameters(GParam const * const param,
     fprintf(fp, "metropolis acceptance link: %.10lf\n", acc_link);
     fprintf(fp, "metropolis acceptance link big: %.10lf\n", acc_link_big);
     fprintf(fp, "\n");
+
+	#ifdef GAUGE_FIX
+    fprintf(fp, "quench_epsilon_metro: %.10lf \n", param->d_quench_epsilon_metro);
+	fprintf(fp, "acceptance in gauge fixing update: %.10lf\n", quench_acc);
+	#else
+	(void) quench_acc; // just to avoid warnings
+	#endif
 
     fprintf(fp, "randseed: %u\n", param->d_randseed);
     fprintf(fp, "\n");

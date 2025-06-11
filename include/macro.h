@@ -3,7 +3,7 @@
 
 #include"../config.h"
 
-#define CHARGE 1
+#define CHARGE 6
 
 //#define DEBUG  // activate some debug tests
 
@@ -13,7 +13,10 @@
 
 //#define LINKS_FIXED_TO_ONE  //to remove gauge fields
 
+//#define BIG_LINK
 
+#define GAUGE_FIX //to use the stocastic gauge fixing
+//#define DEBUG_GAUGE_FIX //used to debug the stocastic gauge fixing
 #ifdef TEMPORAL_GAUGE
   #ifndef CSTAR_BC
     #error "TEMPORAL_GAUGE can be defined only with C* boundary conditions"

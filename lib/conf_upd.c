@@ -171,6 +171,39 @@ void overrelaxation_for_phi(Conf *GC,
   #endif
   }
 
+void overrelaxation_for_gauge(Conf *GC,
+                            Geometry const * const geo,
+							GParam const * const param,
+                            long r)
+  {
+  double norm;//
+  double complex staple;
+
+	#ifdef DEBUG
+  	  double energy_before, energy_after;
+  	  energy_before=gauge_fixing_interaction(GC,geo,param);
+	#endif
+  calcstaples_for_gauge(GC, geo, r, &staple);
+  norm=cabs(staple)*cabs(staple);
+
+  if(norm>MIN_VALUE)
+    {
+	 GC->gauge[r]=conj(GC->gauge[r])*conj(staple)*conj(staple)/norm;
+    }
+  else return;
+
+	#ifdef DEBUG
+	  energy_after=gauge_fixing_interaction(GC,geo,param);
+	  if (fabs(energy_before-energy_after)>1e-10)
+		  {
+		  fprintf(stderr, "Problem in overrelaxation (%s, %d) \n %.12lf \n %.12lf \n %.12lf \n", __FILE__, __LINE__,energy_before, energy_after,MIN_VALUE);
+		  exit(EXIT_FAILURE);
+		  }
+	#endif
+
+  (void) param; //to avoid complains as it just used for debugging,
+  }
+
 
 // staples for the plaquette component of the action
 // sum (plaq) = lambda_{x,mu}*staple + independent of lambda_{x,mu}
@@ -301,7 +334,7 @@ int metropolis_for_link(Conf *GC,
   new_energy_aux -= param->d_masssq * creal(new_lambda);
   GC->lambda[r][i] = old_lambda;
 
-  //printf("%g %g\n", old_energy-new_energy, old_energy-new_energy -(old_energy_aux-new_energy_aux));
+
   if(fabs(old_energy-new_energy -(old_energy_aux-new_energy_aux))>1.0e-10 )
     {
     fprintf(stderr, "Problem in energy in metropolis for link (%s, %d)\n", __FILE__, __LINE__);
@@ -323,6 +356,73 @@ int metropolis_for_link(Conf *GC,
   return acc;
   }
 
+void calcstaples_for_gauge(Conf *GC,
+		Geometry const * const geo,
+		long r,
+		double complex *staple)
+{
+	int i;
+	double complex aux;
+
+	aux=0;
+	for (i=0; i<STDIM; i++)
+	{
+		aux+=conj(GC->lambda[r][i])*conj(GC->gauge[nnp(geo,r,i)]);
+		aux+=conj(GC->gauge[nnm(geo,r,i)])*GC->lambda[nnm(geo,r,i)][i];
+	}
+
+	*staple=aux;
+}
+
+// metropolis on the gauge transformations, return 1 if accepted, 0 otherwise
+int metropolis_for_gauge(Conf *GC,
+                         Geometry const * const geo,
+                         GParam const * const param,
+                         long r)
+{
+	double old_energy, new_energy;
+	double complex staple, old_gauge, new_gauge;
+	int acc=0;
+
+	old_gauge= GC->gauge[r];
+	new_gauge= GC->gauge[r]*cexp(I*param->d_quench_epsilon_metro*(2.0*casuale()-1));
+
+	calcstaples_for_gauge(GC, geo, r, &staple);
+	old_energy=-param->d_quench_gamma * (double)(creal(old_gauge*staple));
+	new_energy=-param->d_quench_gamma * (double)(creal(new_gauge*staple));
+
+	#ifdef DEBUG
+	  double old_energy_aux, new_energy_aux;
+	  double diff;
+	  old_energy_aux = gauge_fixing_interaction(GC, geo, param);
+
+	  GC->gauge[r] = new_gauge;
+	  new_energy_aux = gauge_fixing_interaction(GC, geo, param);
+
+	  GC->gauge[r] = old_gauge;
+	  diff=fabs(old_energy-new_energy -(old_energy_aux-new_energy_aux));
+	  //printf("%g %g\n", old_energy-new_energy, old_energy-new_energy -(old_energy_aux-new_energy_aux));
+	  if(diff>1.0e-10 )
+		{
+		fprintf(stderr, "Problem in energy in metropolis for link (%s, %d, %f)\n", __FILE__, __LINE__, diff);
+		exit(EXIT_FAILURE);
+		}
+  	#endif
+
+	 if(old_energy>new_energy)
+	    {
+	    GC->gauge[r] = new_gauge;
+	    acc=1;
+	    }
+	  else if(casuale()< exp(old_energy-new_energy) )
+	         {
+	         GC->gauge[r] = new_gauge;
+	         acc=1;
+	         }
+
+	  return acc;
+
+}
 
 // perform a discrete update with metropolis of the link variables
 // retrn 0 if the trial state is rejected and 1 otherwise
@@ -443,7 +543,9 @@ void update(Conf * GC,
         for(dir=0; dir<STDIM; dir++)
            {
            asum_link+=metropolis_for_link(GC, geo, param, r, dir);
-           asum_link_big+=metropolis_for_link_big(GC, geo, param, r, dir);
+           #ifdef BIG_LINK
+	      asum_link_big+=metropolis_for_link_big(GC, geo, param, r, dir);
+	   #endif
            }
         }
      #else
@@ -452,8 +554,10 @@ void update(Conf * GC,
         for(dir=1; dir<STDIM; dir++)
            {
            asum_link+=metropolis_for_link(GC, geo, param, r, dir);
-           asum_link_big+=metropolis_for_link_big(GC, geo, param, r, dir);
-           }
+	   #ifdef BIG_LINK
+	      sum_link_big+=metropolis_for_link_big(GC, geo, param, r, dir);
+           #endif
+	   }
         }
      #endif
    #endif
@@ -498,5 +602,234 @@ void update(Conf * GC,
 
    GC->update_index++;
    }
+
+void gauge_apply(Conf *GC,
+                 Geometry const * const geo,
+                 GParam const * const param)
+  {
+  int i;
+  long int r;
+
+  for(r=0; r<param->d_volume; r++)
+     {
+	 times_equal_complex_Vec(&(GC->phi[r]), chargepow(conj(GC->gauge[r])));
+     for(i=0; i<STDIM; i++)
+        {
+        GC->lambda[r][i]*=conj(GC->gauge[r])*GC->gauge[nnp(geo, r, i)];
+        }
+     }
+  }
+
+void inv_gauge_apply(Conf *GC,
+                 Geometry const * const geo,
+                 GParam const * const param)
+  {
+  int i;
+  long int r;
+
+  for(r=0; r<param->d_volume; r++)
+     {
+	 times_equal_complex_Vec(&(GC->phi[r]), chargepow(GC->gauge[r]));
+	 unitarize_Vec(&(GC->phi[r]));
+     for(i=0; i<STDIM; i++)
+        {
+        GC->lambda[r][i]*=GC->gauge[r]*conj(GC->gauge[nnp(geo, r, i)]);
+        }
+     }
+  }
+
+// perform the gauge transformation update and perform measures
+// return acceptance rate of update
+double glass_evolution_and_meas(Conf *GC,
+                                Conf *GC2,
+                                GParam *param,
+                                Geometry const * const geo,
+                                FILE *datafilep,
+								FILE *datafilep2)
+  {
+  int i, err,observables;
+  observables=8;
+  int j;
+  long count, count2, r, nummeas;
+  double acc, acc_loc, buffer[observables], buffer2[observables], *data, *data2,norm;
+  double scalar_coupling, plaq, relink, imaglink;
+
+  nummeas=(param->d_quench_sample-param->d_quench_thermal)/param->d_quench_measevery;
+
+  err=posix_memalign((void**) &(data), (size_t) DOUBLE_ALIGN, (size_t) (observables*nummeas) * sizeof(double));
+  err=posix_memalign((void**) &(data2), (size_t) DOUBLE_ALIGN, (size_t) (observables*nummeas) * sizeof(double));
+  if(err!=0)
+    {
+    fprintf(stderr, "Problems in allocating the vector for measures! (%s, %d)\n", __FILE__, __LINE__);
+    exit(EXIT_FAILURE);
+    }
+
+  init_conf(GC2, param);
+  equal_conf(GC, GC2, param);
+  restart_gauge_conf(GC, param);
+  restart_gauge_conf(GC2, param);
+
+  //Perform the gauge-invariant measure before the stocastic gauge-fixing
+  for(r=0; r<(param->d_volume); r++)
+   {
+	init_FMatrix(&(GC->Qh[r]), &(GC->phi[r]));
+   }
+  perform_tensor_measures_buffer(GC, param, geo, buffer);
+  scalar_coupling=higgs_interaction(GC, geo, param);
+  plaq=plaquette(GC, geo, param);
+  relink=realpartlink(GC, param);
+  imaglink=imagpartlink(GC, param);
+  fprintf(datafilep, "%.12lf %.12lf %.12lf %.12lf %.12lf %.12f ", buffer[0], buffer[1], scalar_coupling, plaq, relink, imaglink);
+  fprintf(datafilep2, "%.12lf %.12lf %.12lf %.12lf %.12lf %.12f ", buffer[0], buffer[1], scalar_coupling, plaq, relink, imaglink);
+
+  for(int obs=0; obs<observables;obs++){
+	  buffer[obs]=0;
+	  buffer2[obs]=0;
+  }
+
+
+  count2=0;
+  //update both GC and GC2
+  acc=0.0;
+  for(count=1; count<=param->d_quench_sample; count++)
+     {
+     acc_loc=0;
+     for(r=0; r<param->d_volume; r++)
+        {
+        acc_loc+=metropolis_for_gauge(GC, geo, param, r);
+        acc_loc+=metropolis_for_gauge(GC2, geo, param, r);
+        }
+     if(count>param->d_quench_thermal)
+       {
+	 acc+=acc_loc*param->d_inv_vol*0.5;
+       }
+     for(j=0; j<param->d_quench_overrelax; j++)
+        {
+        for(r=0; r<(param->d_volume); r++)
+           {
+           overrelaxation_for_gauge(GC, geo, param, r);
+           overrelaxation_for_gauge(GC2, geo, param, r);
+           }
+        }
+
+     // final unitarization
+     for(r=0; r<(param->d_volume); r++)
+        {
+		   norm=cabs(GC->gauge[r]);
+		   GC->gauge[r]/=norm;
+        }
+
+     for(r=0; r<(param->d_volume); r++)
+        {
+		   norm=cabs(GC2->gauge[r]);
+		   GC2->gauge[r]/=norm;
+        }
+
+     /*if(count<=param->d_thermal)
+       {
+         if(acc_loc>0.33)
+           {
+	     param->d_quench_epsilon_metro*=1.1;
+
+	     if(param->d_quench_epsilon_metro>1.0)
+	       {
+		 param->d_quench_epsilon_metro=1.0;
+	       }
+           }
+         else
+           {
+	     param->d_quench_epsilon_metro*=0.9;
+           }
+
+       }*/
+
+     if(count % param->d_quench_measevery ==0 && count > param->d_quench_thermal)
+       {
+
+		#ifdef DEBUG
+    	  Conf GC_old;
+    	  init_conf(&GC_old, param);
+    	  equal_conf(GC, &GC_old, param);
+		#endif
+        gauge_apply(GC, geo, param);
+        gauge_apply(GC2, geo, param);
+
+        perform_vec_measures_buffer(GC, param, geo, buffer);
+        perform_vec_measures_buffer(GC2, param, geo, buffer2);
+        perform_gauge_measures_buffer(GC, param, geo, buffer);
+        perform_gauge_measures_buffer(GC2, param, geo, buffer2);
+        perform_overlap_measures_buffer(GC, GC2, param, geo, buffer);
+        buffer2[4]=buffer[4];
+
+        buffer[6] = gauge_fixing_interaction(GC, geo, param);
+        buffer2[6] = gauge_fixing_interaction(GC2, geo, param);
+
+        buffer[7] = realpartlink(GC, param);
+        buffer2[7] = imagpartlink(GC, param);
+
+        inv_gauge_apply(GC, geo, param);
+        inv_gauge_apply(GC2, geo, param);
+
+		#ifdef DEBUG
+        Vec tmp_vector;
+        for(r=0; r<(param->d_volume); r++)
+        {
+        tmp_vector=GC_old.phi[r];
+        minus_equal_Vec(&tmp_vector,&GC->phi[r]);
+		if (norm_Vec(&tmp_vector)>1.0e-10)
+		{
+			fprintf(stderr, "Problem in applying gauge for phi (%s, %d)\n", __FILE__, __LINE__);
+			exit(EXIT_FAILURE);
+		}
+        if (cabs(GC_old.gauge[r]-GC->gauge[r])>1.0e-10)
+        {
+    		fprintf(stderr, "Problem in applying gauge for gauge (%s, %d)\n", __FILE__, __LINE__);
+    		exit(EXIT_FAILURE);
+        }
+        for(i=0; i<STDIM; i++)
+        {
+		if (cabs(GC_old.lambda[r][i]-GC->lambda[r][i])>1.0e-10 )
+				{
+					fprintf(stderr, "Problem in energy in applying gauge for link (%s, %d)\n", __FILE__, __LINE__);
+					exit(EXIT_FAILURE);
+				}
+
+        }
+        }
+		#endif
+
+       /*for(i=0; i<4; i++)
+          {
+          buffer[i]+=buffer2[i];
+          buffer[i]*=0.5;
+          }*/
+       for(i=0; i<observables; i++)
+          {
+          data[observables*count2+i]=buffer[i];
+          data2[observables*count2+i]=buffer2[i];
+          }
+
+       count2++;
+       }
+     }
+
+  
+  acc/=(double)(param->d_quench_sample-param->d_quench_thermal);
+
+  for(r=0; r<observables*nummeas; r++)
+     {
+     fprintf(datafilep, "%.12lf ", data[r]);
+     fprintf(datafilep2, "%.12lf ", data2[r]);
+     }
+  fprintf(datafilep, "\n");
+  fflush(datafilep);
+  fprintf(datafilep2, "\n");
+  fflush(datafilep2);
+
+  free(data);
+  free(data2);
+
+  return acc;
+  }
 
 #endif

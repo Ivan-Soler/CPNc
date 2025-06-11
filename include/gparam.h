@@ -15,12 +15,12 @@ typedef struct GParam {
   double d_K;
   double d_masssq;
 
+
   // simulation details
   int d_sample;
   int d_thermal;
   int d_overrelax;
   int d_measevery;
-
   // initialization & saving
   int d_start;
   int d_saveconf_back_every;
@@ -28,6 +28,14 @@ typedef struct GParam {
   // for metropolis
   double d_epsilon_metro_link;
   double d_epsilon_metro_site;
+
+  // for quenched averages if GAUGE_FIX is defined
+  double d_quench_gamma;
+  double d_quench_epsilon_metro;
+  int d_quench_sample;
+  int d_quench_thermal;
+  int d_quench_measevery;
+  int d_quench_overrelax;
 
   // output file names
   char d_conf_file[STD_STRING_LENGTH];
@@ -54,6 +62,7 @@ void print_parameters(GParam const * const param,
                       time_t time_end,
                       double acc_site,
                       double acc_link,
-                      double acc_link_big);
+                      double acc_link_big,
+					  double quench_acc);
 
 #endif

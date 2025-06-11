@@ -6,6 +6,7 @@
 #include<math.h>
 #include<stdio.h>
 #include<stdlib.h>
+#include<complex.h>
 
 #include"../include/flavour_matrix.h"
 #include"../include/gparam.h"
@@ -126,6 +127,26 @@ double higgs_interaction(Conf const * const GC,
   return ris;
   }
 
+double gauge_fixing_interaction(Conf const * const GC,
+		Geometry const * const geo,
+		GParam const * const param)
+	{
+	int i;
+	long r;
+	double ris=0.0;
+
+	for(i=0; i<STDIM; i++)
+		{
+		for(r=0; r<param->d_volume; r++)
+			{
+				ris+=creal(conj(GC->gauge[r])*GC->lambda[r][i]*GC->gauge[nnp(geo,r,i)]);
+			}
+
+		}
+	ris*=-param->d_quench_gamma;
+	return ris;
+	}
+
 
 // return the average of Re(link)
 double realpartlink(Conf const * const GC,
@@ -140,6 +161,27 @@ double realpartlink(Conf const * const GC,
      for(r=0; r<param->d_volume; r++)
         {
         ris+=creal(GC->lambda[r][i]);
+        }
+     }
+
+  ris*=param->d_inv_vol;
+  ris/=((double) STDIM);
+
+  return ris;
+  }
+
+double imagpartlink(Conf const * const GC,
+                    GParam const * const param)
+  {
+  int i;
+  long r;
+  double ris=0.0;
+
+  for(i=0; i<STDIM; i++)
+     {
+     for(r=0; r<param->d_volume; r++)
+        {
+        ris+=cimag(GC->lambda[r][i]);
         }
      }
 
@@ -202,6 +244,23 @@ void compute_flavour_observables_tensor(Conf const * const GC,
   *tildeGminp=retr_FMatrix(&tmp1)*param->d_inv_vol;
   }
 
+// perform tensor-related measures and save results in a buffer
+void perform_tensor_measures_buffer(Conf *GC,
+                                 GParam const * const param,
+                                 Geometry const * const geo,
+                                 double buffer[5])
+   {
+   (void) geo; // kept just for consistency with other measures
+   double tildeG0_v, tildeGminp_v;
+
+   compute_flavour_observables_tensor(GC,
+                                      param,
+                                      &tildeG0_v,
+                                      &tildeGminp_v);
+
+   buffer[0]=tildeG0_v;
+   buffer[1]=tildeGminp_v;
+   }
 
 // compute flavour related observables in the vector channel
 //
@@ -235,6 +294,7 @@ void compute_flavour_observables_vector(Conf const * const GC,
 
      times_equal_complex_Vec(&tmp1, cexp(I*((double)coord[1])*p));
      plus_equal_Vec(&Vp, &tmp1);
+
      }
 
   equal_Vec(&tmp1, &V);
@@ -242,8 +302,82 @@ void compute_flavour_observables_vector(Conf const * const GC,
 
   equal_Vec(&tmp1, &Vp);
   *tildeGminp=creal(scal_prod_Vec(&tmp1, &Vp))*param->d_inv_vol;
+
   }
 
+// perform vector-related measures and save results in a buffer
+void perform_vec_measures_buffer(Conf *GC,
+                                 GParam const * const param,
+                                 Geometry const * const geo,
+                                 double buffer[5])
+   {
+   (void) geo; // kept just for consistency with other measures
+   double tildeG0_v, tildeGminp_v;
+
+   compute_flavour_observables_vector(GC,
+                                      param,
+                                      &tildeG0_v,
+                                      &tildeGminp_v);
+
+   buffer[0]=tildeG0_v;
+   buffer[1]=tildeGminp_v;
+   }
+
+// performe gauge measures and save in a buffer
+void perform_gauge_measures_buffer(Conf const * const GC,
+                                     GParam const * const param,
+                                     Geometry const * const geo,
+                                     double buffer[5])
+  {
+	(void) geo;
+	int coord[STDIM];
+	long r;
+	const double p = 2.0*PI/(double)param->d_size[1];
+	double complex C, Cp;
+
+	C=0;
+	Cp=0;
+
+	// C = sum_x gauge_{x,\mu}
+	// Cp= sum_x e^{ipx} gauge_{x,\mu}
+	for (r=0; r<(param->d_volume); r++){
+		C+=GC->lambda[r][2];
+
+		si_to_cart(coord,r,param);
+
+		Cp+=cexp(I*((double)coord[1])*p)*GC->lambda[r][2];
+
+	}
+
+	C=C*conj(C);
+	Cp=Cp*conj(Cp);
+
+	buffer[2]=creal(C)*param->d_inv_vol;
+	buffer[3]=creal(Cp)*param->d_inv_vol;
+
+  }
+
+// performe overlap measures and save in a buffer
+void perform_overlap_measures_buffer(Conf const * const GC,
+                                     Conf const * const GC2,
+                                     GParam const * const param,
+                                     Geometry const * const geo,
+                                     double buffer[5])
+  {
+  long int r;
+  (void) geo; // geo is used only for consistency with other cases
+                // so it is possibile to add \xi computation without changes
+  double complex overlap;
+  overlap=0.0;
+
+  for(r=0; r<param->d_volume; r++)
+     {
+     overlap+=conj(GC->gauge[r])*GC2->gauge[r];
+     }
+
+  buffer[4]=(double) (conj(overlap)*overlap*param->d_inv_vol);
+
+  }
 
 void perform_measures(Conf *GC,
                       GParam const * const param,
@@ -255,6 +389,7 @@ void perform_measures(Conf *GC,
    double tildeG0_t, tildeGminp_t;
    double tildeG0_v, tildeGminp_v;
    double scalar_coupling, plaq, relink;
+
 
    for(r=0; r<(param->d_volume); r++)
       {
@@ -270,7 +405,20 @@ void perform_measures(Conf *GC,
                                       param,
                                       &tildeG0_v,
                                       &tildeGminp_v);
+	#ifdef DEBUG_GAUGE_INV
+   double buffer[5];
+   compute_flavour_observables_vector(GC,
+                                      param,
+                                      &tildeG0_v,
+                                      &tildeGminp_v);
 
+   perform_gauge_measures_buffer(GC,
+		   	   	   	   	   	   	 param,
+								 geo,
+								 buffer);
+   tildeG0_t=buffer[2];
+   tildeGminp_t=buffer[3];
+	#endif
    scalar_coupling=higgs_interaction(GC, geo, param);
    plaq=plaquette(GC, geo, param);
    relink=realpartlink(GC, param);
