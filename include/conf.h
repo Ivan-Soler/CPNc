@@ -154,6 +154,11 @@ long monpoles_cube(Conf const * const GC,
 long measure_monopoles(Conf const * const GC,
         Geometry const * const geo,
         GParam const * const param);
+long action_monopoles(Conf const * const GC,
+        Geometry const * const geo,
+        GParam const * const param,
+        long r,
+        int i);
 void compute_flavour_observables_tensor(Conf const * const GC,
                                         GParam const * const param,
                                         double *tildeG0,

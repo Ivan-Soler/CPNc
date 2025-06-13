@@ -265,7 +265,7 @@ long monpoles_cube(Conf const * const GC,
 #ifdef DEBUG
    if(abs(ris)>0)
    {
-   fprintf(stderr, " %d Monopoles at r=%ld \n",ris,r);
+   //fprintf(stderr, " %d Monopoles at r=%ld \n",ris,r);
    }
 #endif
 
@@ -283,6 +283,27 @@ long measure_monopoles(Conf const * const GC,
       {
       monopoles+=monpoles_cube(GC,geo,r,param);
       }
+   return(monopoles);
+   }
+
+long action_monopoles(Conf const * const GC,
+        Geometry const * const geo,
+        GParam const * const param,
+        long r,
+        int i)
+   {
+   long rr,monopoles;
+
+   monopoles=0;
+   monopoles+=monpoles_cube(GC,geo,r,param);
+   rr=nnm(geo,r,(i+1)%STDIM);
+   monopoles+=monpoles_cube(GC,geo,rr,param);
+   rr=nnm(geo,r,(i+2)%STDIM);
+   monopoles+=monpoles_cube(GC,geo,rr,param);
+   rr=nnm(geo,r,(i+1)%STDIM);
+   rr=nnm(geo,rr,(i+2)%STDIM);
+   monopoles+=monpoles_cube(GC,geo,rr,param);
+
    return(monopoles);
    }
 

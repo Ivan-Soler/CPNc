@@ -316,23 +316,31 @@ int metropolis_for_link(Conf *GC,
   old_energy=-2.0*(double)NFLAVOUR*(param->d_J)*creal(sc*chargepow(old_lambda) );
   old_energy-=2.0*param->d_K*creal(old_lambda*pstaple);
   old_energy-= param->d_masssq * creal(old_lambda);
+  old_energy-= param->d_chemical * (double) action_monopoles(GC,geo,param,r,i);
   new_lambda = old_lambda*cexp(I*param->d_epsilon_metro_link*(2.0*casuale()-1));
 
+  GC->lambda[r][i] = new_lambda;
   new_energy=-2.0*(double)NFLAVOUR*(param->d_J)*creal(sc*chargepow(new_lambda) );
   new_energy-=2.0*param->d_K*creal(new_lambda*pstaple);
+  new_energy-= param->d_chemical * (double) action_monopoles(GC,geo,param,r,i);
   new_energy-= param->d_masssq * creal(new_lambda);
 
   #ifdef DEBUG
   double old_energy_aux, new_energy_aux;
-  old_energy_aux = -2.0 * (double)NFLAVOUR *(param->d_J)*higgs_interaction(GC, geo, param)*(double)STDIM * (double)param->d_volume;
-  old_energy_aux -= 2.0 * (param->d_K)*plaquette(GC, geo, param)*(double)STDIM*((double)STDIM-1.0)/2.0 *(double) param->d_volume;
-  old_energy_aux -= param->d_masssq * creal(old_lambda);
 
-  GC->lambda[r][i] = new_lambda;
+  //GC->lambda[r][i] = new_lambda;
   new_energy_aux = -2.0 * (double)NFLAVOUR *(param->d_J)*higgs_interaction(GC, geo, param)*(double)STDIM * (double)param->d_volume;
   new_energy_aux -= 2.0 * (param->d_K)*plaquette(GC, geo, param)*(double)STDIM*((double)STDIM-1.0)/2.0 *(double) param->d_volume;
   new_energy_aux -= param->d_masssq * creal(new_lambda);
+  new_energy_aux -= param->d_chemical* (double) measure_monopoles(GC,geo,param);
+
   GC->lambda[r][i] = old_lambda;
+  old_energy_aux = -2.0 * (double)NFLAVOUR *(param->d_J)*higgs_interaction(GC, geo, param)*(double)STDIM * (double)param->d_volume;
+  old_energy_aux -= 2.0 * (param->d_K)*plaquette(GC, geo, param)*(double)STDIM*((double)STDIM-1.0)/2.0 *(double) param->d_volume;
+  old_energy_aux -= param->d_masssq * creal(old_lambda);
+  old_energy_aux -= param->d_chemical*(double) measure_monopoles(GC,geo,param);
+
+  //GC->lambda[r][i] = old_lambda;
 
 
   if(fabs(old_energy-new_energy -(old_energy_aux-new_energy_aux))>1.0e-10 )
@@ -344,14 +352,18 @@ int metropolis_for_link(Conf *GC,
 
   if(old_energy>new_energy)
     {
-    GC->lambda[r][i] = new_lambda;
+    //GC->lambda[r][i] = new_lambda;
     acc=1;
     }
   else if(casuale()< exp(old_energy-new_energy) )
          {
-         GC->lambda[r][i] = new_lambda;
+         //GC->lambda[r][i] = new_lambda;
          acc=1;
          }
+  else
+     {
+     GC->lambda[r][i]=old_lambda;
+     }
 
   return acc;
   }

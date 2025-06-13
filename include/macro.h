@@ -3,9 +3,9 @@
 
 #include"../config.h"
 
-#define CHARGE 6
+#define CHARGE 1
 
-//#define DEBUG  // activate some debug tests
+#define DEBUG  // activate some debug tests
 
 //#define CSTAR_BC   //C* bounday conditions
 
@@ -15,7 +15,7 @@
 
 //#define BIG_LINK
 
-#define GAUGE_FIX //to use the stocastic gauge fixing
+//#define GAUGE_FIX //to use the stocastic gauge fixing
 //#define DEBUG_GAUGE_FIX //used to debug the stocastic gauge fixing
 #ifdef TEMPORAL_GAUGE
   #ifndef CSTAR_BC
