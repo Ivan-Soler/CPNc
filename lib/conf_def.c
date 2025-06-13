@@ -91,10 +91,52 @@ void init_conf(Conf *GC,
        for(j=0; j<STDIM; j++)
           {
           theta=0.05*(2.0*casuale()-1.0);
-    	  //theta=0;
+    	    theta=0;
           GC->lambda[r][j]=cos(theta)+I*sin(theta);
           }
        }
+    #ifdef DEBUG
+    //we introduce two monopoles for checks
+    Geometry geo;
+    init_geometry(&geo, param);
+    int i,j;
+    int k;
+    i=1;
+    j=0;
+    k=2;
+    long rr;
+    long r;
+
+    r=10;
+    fprintf(stderr, "Monopole inserted at: ");
+    fprintf(stderr, "%ld, ", r);
+    fprintf(stderr, "\n ");
+    theta=PI/2-0.01;
+    GC->lambda[r][j]=cos(theta)+I*sin(theta);  // (1)
+    GC->lambda[nnp(&geo, r, j)][i]=cos(theta)+I*sin(theta); // (2)
+    GC->lambda[nnp(&geo, r, i)][j]=cos(theta)-I*sin(theta); // (3)
+    GC->lambda[r][i]=cos(theta)-I*sin(theta); // (4)
+
+    rr=nnp(&geo,r,k);
+
+    GC->lambda[rr][j]=cos(theta)-I*sin(theta);  // (1)
+    GC->lambda[nnp(&geo, rr, j)][i]=cos(theta)-I*sin(theta); // (2)
+    GC->lambda[nnp(&geo, rr, i)][j]=cos(theta)+I*sin(theta); // (3)
+    GC->lambda[rr][i]=cos(theta)+I*sin(theta); // (4)
+
+   /* GC->lambda[r][k]=cos(theta)-I*sin(theta);  //
+    GC->lambda[nnp(&geo,r,j)][k]=cos(theta)+I*sin(theta);  //
+    //GC->lambda[nnp(&geo,r,i)][k]=cos(theta)-I*sin(theta);  //
+
+    rr=nnp(&geo,r,i);
+    theta=0;
+    GC->lambda[rr][k]=cos(theta)+I*sin(theta);  //
+    rr=nnp(&geo,rr,j);
+    theta=PI;
+    GC->lambda[rr][k]=cos(theta)+I*sin(theta);  //
+    fprintf(stderr, "\n ");*/
+    free_geometry(&geo, param);
+    #endif
     }
 
   if(param->d_start==1)  // random start
@@ -268,11 +310,13 @@ void free_conf(Conf *GC, GParam const * const param)
      {
      free(GC->lambda[i]);
      }
+
   free(GC->lambda);
 
   free(GC->phi);
 
   free(GC->Qh);
+
   }
 
 void equal_conf(Conf const * const GC, Conf *GC2,

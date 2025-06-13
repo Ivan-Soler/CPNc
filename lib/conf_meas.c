@@ -192,6 +192,101 @@ double imagpartlink(Conf const * const GC,
   }
 
 
+//Flux and monopole related stuff//
+//Flux through a plaquette//
+double flux_plaquette(Conf const * const GC,
+        Geometry const * const geo,
+        long r,
+        int j,
+        int i)
+   {
+   double ris;
+   ris=0;
+   ris+=carg(GC->lambda[r][j]);
+   ris+=carg(GC->lambda[nnp(geo,r,j)][i]);
+   ris-=carg(GC->lambda[nnp(geo,r,i)][j]);
+   ris-=carg((GC->lambda[r][i]));
+
+   return(fmod(ris,2*PI));
+   }
+
+//Monopoles inside a cube//
+
+/*
+ *   +----------+
+    /         / |
+   +----<----+  |
+   |         |  +
+   V         ^ /
+   |         |/
+   +---->----+
+
+
+
+
+   ^  (2)
+   |
+   |     (1)
+   |  /
+   | /
+   |/
+   +-------------> (0)
+
+
+               */
+
+long monpoles_cube(Conf const * const GC,
+        Geometry const * const geo,
+        long r,
+        GParam const * const param)
+   {
+   double flux;
+   int ris;
+
+   flux=0;
+   flux-=flux_plaquette(GC,geo,r,0,2);  //front (flow points outside)
+   flux+=flux_plaquette(GC,geo,r,0,1);  //bottom (flow points inside)
+   flux+=flux_plaquette(GC,geo,r,1,2);  //left  (flow points inside)
+
+   flux+=flux_plaquette(GC,geo,nnp(geo,r,1),0,2);  //back (flow points inside)
+   flux-=flux_plaquette(GC,geo,nnp(geo,r,2),0,1);  //top (flow points outside)
+   flux-=flux_plaquette(GC,geo,nnp(geo,r,0),1,2);  //right (flow points outside)
+
+#ifdef DEBUG
+   if(param->d_start==0){
+      flux=0;
+      flux+=flux_plaquette(GC,geo,r,0,1);  //front (flow points outside)
+      flux-=flux_plaquette(GC,geo,nnp(geo,r,2),0,1);  //back (flow points inside)
+   }
+
+#endif
+   ris=(int)(flux/(2*PI));
+
+#ifdef DEBUG
+   if(abs(ris)>0)
+   {
+   fprintf(stderr, " %d Monopoles at r=%ld \n",ris,r);
+   }
+#endif
+
+   return(ris);
+   }
+
+long measure_monopoles(Conf const * const GC,
+        Geometry const * const geo,
+        GParam const * const param)
+   {
+   long r,monopoles;
+   monopoles=0;
+
+   for(r=0; r<param->d_volume; r++)
+      {
+      monopoles+=monpoles_cube(GC,geo,r,param);
+      }
+   return(monopoles);
+   }
+
+
 // compute flavour related observables in the tensor channel
 //
 // GC->Qh needs to be initialized before calling this function
@@ -389,6 +484,7 @@ void perform_measures(Conf *GC,
    double tildeG0_t, tildeGminp_t;
    double tildeG0_v, tildeGminp_v;
    double scalar_coupling, plaq, relink;
+   long monopoles;
 
 
    for(r=0; r<(param->d_volume); r++)
@@ -423,10 +519,12 @@ void perform_measures(Conf *GC,
    plaq=plaquette(GC, geo, param);
    relink=realpartlink(GC, param);
 
+   monopoles=measure_monopoles(GC,geo,param);
+
    fprintf(datafilep, "%.12g %.12g ", tildeG0_t, tildeGminp_t);
    fprintf(datafilep, "%.12g %.12g ", tildeG0_v, tildeGminp_v);
    fprintf(datafilep, "%.12g %.12g ", scalar_coupling, plaq);
-   fprintf(datafilep, "%.12g ", relink);
+   fprintf(datafilep, "%.12g %ld", relink,monopoles);
    fprintf(datafilep, "\n");
 
    fflush(datafilep);

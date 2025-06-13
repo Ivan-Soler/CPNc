@@ -142,6 +142,18 @@ double realpartlink(Conf const * const GC,
                     GParam const * const param);
 double imagpartlink(Conf const * const GC,
                     GParam const * const param);
+double flux_plaquette(Conf const * const GC,
+        Geometry const * const geo,
+        long r,
+        int i,
+        int j);
+long monpoles_cube(Conf const * const GC,
+        Geometry const * const geo,
+        long r,
+        GParam const * const param);
+long measure_monopoles(Conf const * const GC,
+        Geometry const * const geo,
+        GParam const * const param);
 void compute_flavour_observables_tensor(Conf const * const GC,
                                         GParam const * const param,
                                         double *tildeG0,
