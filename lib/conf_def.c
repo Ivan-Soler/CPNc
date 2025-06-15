@@ -105,9 +105,10 @@ void init_conf(Conf *GC,
     k=2;
     long rr;
     long r;
-    double theta,
+    double theta,delta;
 
     theta=PI;
+    delta=0.1;
     r=10;
 
     fprintf(stderr, "Monopole inserted at: ");
@@ -116,6 +117,7 @@ void init_conf(Conf *GC,
     fprintf(stderr, "Anti-monopole inserted at: %ld",rr);
 
     GC->lambda[r][j]=cos(theta)-I*sin(theta);  // (1)
+    GC->lambda[nnp(&geo, r, j)][i]=cos(delta)-I*sin(delta); // (2)
     GC->lambda[nnp(&geo, r, i)][j]=cos(theta)+I*sin(theta); // (3)
 
     fprintf(stderr, "\n ");

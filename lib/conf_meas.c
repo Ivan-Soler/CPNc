@@ -208,6 +208,7 @@ double flux_plaquette(Conf const * const GC,
    ris-=carg(GC->lambda[nnp(geo,r,i)][j]);
    ris-=carg((GC->lambda[r][i]));
 
+
    return(fmod(ris,2*PI));
    }
 
@@ -254,7 +255,7 @@ long monpoles_cube(Conf const * const GC,
    flux-=flux_plaquette(GC,geo,nnp(geo,r,2),0,1);  //top (flow points outside)
    flux-=flux_plaquette(GC,geo,nnp(geo,r,0),1,2);  //right (flow points outside)
 
-   ris=(int)(flux/(2*PI));
+   ris=(int)(flux/(2*PI-0.01));
 
 #ifdef DEBUG
    if(abs(ris)>0)
