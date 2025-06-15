@@ -106,36 +106,45 @@ void init_conf(Conf *GC,
     k=2;
     long rr;
     long r;
-
+    double theta, delta, deltap;
+    //delta=0.2;
+    //deltap=0.22;
+    theta=PI;
     r=10;
-    fprintf(stderr, "Monopole inserted at: ");
-    fprintf(stderr, "%ld, ", r);
-    fprintf(stderr, "\n ");
-    theta=PI/2-0.01;
-    GC->lambda[r][j]=cos(theta)+I*sin(theta);  // (1)
-    GC->lambda[nnp(&geo, r, j)][i]=cos(theta)+I*sin(theta); // (2)
-    GC->lambda[nnp(&geo, r, i)][j]=cos(theta)-I*sin(theta); // (3)
-    GC->lambda[r][i]=cos(theta)-I*sin(theta); // (4)
 
+    fprintf(stderr, "Monopole inserted at: ");
+    fprintf(stderr, "%ld \n ", r);
+    rr=nnm(&geo,r,k);
+    //rr=nnm(&geo,r,j);
+    fprintf(stderr, "Anti-monopole inserted at: %ld",rr);
+
+    GC->lambda[r][j]=cos(theta)-I*sin(theta);  // (1)
+    //GC->lambda[nnp(&geo, r, j)][i]=cos(theta)+I*sin(theta); // (2)
+    GC->lambda[nnp(&geo, r, i)][j]=cos(theta)+I*sin(theta); // (3)
+    //GC->lambda[r][i]=cos(deltap)-I*sin(theta); // (4)
+/*
     rr=nnp(&geo,r,k);
 
     GC->lambda[rr][j]=cos(theta)-I*sin(theta);  // (1)
-    GC->lambda[nnp(&geo, rr, j)][i]=cos(theta)-I*sin(theta); // (2)
+    GC->lambda[nnp(&geo, rr, j)][i]=cos(deltap)-I*sin(deltap); // (2)
     GC->lambda[nnp(&geo, rr, i)][j]=cos(theta)+I*sin(theta); // (3)
-    GC->lambda[rr][i]=cos(theta)+I*sin(theta); // (4)
+    GC->lambda[rr][i]=cos(deltap)+I*sin(deltap); // (4)
 
-   /* GC->lambda[r][k]=cos(theta)-I*sin(theta);  //
-    GC->lambda[nnp(&geo,r,j)][k]=cos(theta)+I*sin(theta);  //
-    //GC->lambda[nnp(&geo,r,i)][k]=cos(theta)-I*sin(theta);  //
+    GC->lambda[r][k]=cos(2*delta)-I*sin(2*delta);  //
+    GC->lambda[nnp(&geo,r,j)][k]=cos(2*delta)+I*sin(2*delta);  //
+    GC->lambda[nnp(&geo,r,i)][k]=cos(2*delta)+I*sin(2*delta);  //
 
     rr=nnp(&geo,r,i);
-    theta=0;
-    GC->lambda[rr][k]=cos(theta)+I*sin(theta);  //
     rr=nnp(&geo,rr,j);
-    theta=PI;
-    GC->lambda[rr][k]=cos(theta)+I*sin(theta);  //
-    fprintf(stderr, "\n ");*/
+    GC->lambda[rr][k]=cos(2*delta)-I*sin(2*delta);  //*/
+
+    fprintf(stderr, "\n ");
     free_geometry(&geo, param);
+
+    (void) deltap;
+    (void) rr;
+    (void) k;
+    (void) delta;
     #endif
     }
 

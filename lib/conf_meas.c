@@ -203,6 +203,7 @@ double flux_plaquette(Conf const * const GC,
    double ris;
    ris=0;
    ris+=carg(GC->lambda[r][j]);
+   //fprintf(stderr, "amgle= %.4g \n",ris);
    ris+=carg(GC->lambda[nnp(geo,r,j)][i]);
    ris-=carg(GC->lambda[nnp(geo,r,i)][j]);
    ris-=carg((GC->lambda[r][i]));
@@ -243,6 +244,7 @@ long monpoles_cube(Conf const * const GC,
    double flux;
    int ris;
 
+   (void) param;
    flux=0;
    flux-=flux_plaquette(GC,geo,r,0,2);  //front (flow points outside)
    flux+=flux_plaquette(GC,geo,r,0,1);  //bottom (flow points inside)
@@ -252,20 +254,16 @@ long monpoles_cube(Conf const * const GC,
    flux-=flux_plaquette(GC,geo,nnp(geo,r,2),0,1);  //top (flow points outside)
    flux-=flux_plaquette(GC,geo,nnp(geo,r,0),1,2);  //right (flow points outside)
 
-#ifdef DEBUG
-   if(param->d_start==0){
-      flux=0;
-      flux+=flux_plaquette(GC,geo,r,0,1);  //front (flow points outside)
-      flux-=flux_plaquette(GC,geo,nnp(geo,r,2),0,1);  //back (flow points inside)
-   }
-
-#endif
+    if(r==10)
+    {
+    fprintf(stderr, "\n at r= 10, flux = %.4g \n",flux);
+    }
    ris=(int)(flux/(2*PI));
 
 #ifdef DEBUG
    if(abs(ris)>0)
    {
-   //fprintf(stderr, " %d Monopoles at r=%ld \n",ris,r);
+   fprintf(stderr, " %d Monopoles at r=%ld flux= %.8g \n",ris,r,flux);
    }
 #endif
 
