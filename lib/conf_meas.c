@@ -254,10 +254,6 @@ long monpoles_cube(Conf const * const GC,
    flux-=flux_plaquette(GC,geo,nnp(geo,r,2),0,1);  //top (flow points outside)
    flux-=flux_plaquette(GC,geo,nnp(geo,r,0),1,2);  //right (flow points outside)
 
-    if(r==10)
-    {
-    fprintf(stderr, "\n at r= 10, flux = %.4g \n",flux);
-    }
    ris=(int)(flux/(2*PI));
 
 #ifdef DEBUG
