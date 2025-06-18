@@ -313,34 +313,34 @@ int metropolis_for_link(Conf *GC,
     pstaple=0.0;
     }
 
-  old_energy=-2.0*(double)NFLAVOUR*(param->d_J)*creal(sc*chargepow(old_lambda) );
+  old_energy =-2.0*(double)NFLAVOUR*(param->d_J)*creal(sc*chargepow(old_lambda) );
   old_energy-=2.0*param->d_K*creal(old_lambda*pstaple);
   old_energy-= param->d_masssq * creal(old_lambda);
-  old_energy-= param->d_chemical * (double) action_monopoles(GC,geo,param,r,i);
-  new_lambda = old_lambda*cexp(I*param->d_epsilon_metro_link*(2.0*casuale()-1));
+ // old_energy+= param->d_chemical * (double) action_monopoles(GC,geo,param,r,i);
 
+  new_lambda = old_lambda*cexp(I*param->d_epsilon_metro_link*(2.0*casuale()-1));
   GC->lambda[r][i] = new_lambda;
+
   new_energy=-2.0*(double)NFLAVOUR*(param->d_J)*creal(sc*chargepow(new_lambda) );
   new_energy-=2.0*param->d_K*creal(new_lambda*pstaple);
-  new_energy-= param->d_chemical * (double) action_monopoles(GC,geo,param,r,i);
   new_energy-= param->d_masssq * creal(new_lambda);
+ // new_energy+= param->d_chemical * (double) action_monopoles(GC,geo,param,r,i);
 
   #ifdef DEBUG
   double old_energy_aux, new_energy_aux;
 
-  //GC->lambda[r][i] = new_lambda;
   new_energy_aux = -2.0 * (double)NFLAVOUR *(param->d_J)*higgs_interaction(GC, geo, param)*(double)STDIM * (double)param->d_volume;
   new_energy_aux -= 2.0 * (param->d_K)*plaquette(GC, geo, param)*(double)STDIM*((double)STDIM-1.0)/2.0 *(double) param->d_volume;
   new_energy_aux -= param->d_masssq * creal(new_lambda);
-  new_energy_aux -= param->d_chemical* (double) measure_monopoles(GC,geo,param);
+  //new_energy_aux += param->d_chemical* (double) measure_monopoles(GC,geo,param);
 
   GC->lambda[r][i] = old_lambda;
   old_energy_aux = -2.0 * (double)NFLAVOUR *(param->d_J)*higgs_interaction(GC, geo, param)*(double)STDIM * (double)param->d_volume;
   old_energy_aux -= 2.0 * (param->d_K)*plaquette(GC, geo, param)*(double)STDIM*((double)STDIM-1.0)/2.0 *(double) param->d_volume;
   old_energy_aux -= param->d_masssq * creal(old_lambda);
-  old_energy_aux -= param->d_chemical*(double) measure_monopoles(GC,geo,param);
+  //old_energy_aux += param->d_chemical*(double) measure_monopoles(GC,geo,param);
 
-  //GC->lambda[r][i] = old_lambda;
+  GC->lambda[r][i] = new_lambda;
 
 
   if(fabs(old_energy-new_energy -(old_energy_aux-new_energy_aux))>1.0e-10 )
@@ -363,6 +363,7 @@ int metropolis_for_link(Conf *GC,
   else
      {
      GC->lambda[r][i]=old_lambda;
+     acc=0;
      }
 
   return acc;

@@ -90,6 +90,7 @@ void init_conf(Conf *GC,
        for(j=0; j<STDIM; j++)
           {
           theta=0.05*(2.0*casuale()-1.0);
+          theta=0;
           GC->lambda[r][j]=cos(theta)+I*sin(theta);
           }
        }
@@ -100,15 +101,16 @@ void init_conf(Conf *GC,
     init_geometry(&geo, param);
     int i,j;
     int k;
-    i=1;
-    j=0;
+    i=0;
+    j=1;
     k=2;
     long rr;
     long r;
     double theta,delta;
 
-    theta=PI;
     delta=0.1;
+    theta=PI-delta/4;
+
     r=10;
 
     fprintf(stderr, "Monopole inserted at: ");
@@ -116,9 +118,10 @@ void init_conf(Conf *GC,
     rr=nnm(&geo,r,k);
     fprintf(stderr, "Anti-monopole inserted at: %ld",rr);
 
-    GC->lambda[r][j]=cos(theta)-I*sin(theta);  // (1)
-    GC->lambda[nnp(&geo, r, j)][i]=cos(delta)-I*sin(delta); // (2)
-    GC->lambda[nnp(&geo, r, i)][j]=cos(theta)+I*sin(theta); // (3)
+    GC->lambda[r][i]=cos(theta)-I*sin(theta);  // (1)
+    GC->lambda[nnp(&geo, r, i)][j]=cos(delta)-I*sin(delta); // (2)
+    GC->lambda[nnp(&geo, r, j)][i]=cos(theta)+I*sin(theta); // (3)
+    GC->lambda[r][j]=cos(delta)+I*sin(delta); // (4)
 
     fprintf(stderr, "\n ");
     free_geometry(&geo, param);

@@ -45,7 +45,7 @@ double plaquette_single(Conf const * const GC,
      ris = GC->lambda[r][j];  // (1)
      ris *= GC->lambda[nnp(geo, r, j)][i]; // (2)
      ris *= conj(GC->lambda[nnp(geo, r, i)][j]); // (3)
-     ris *= conj(GC->lambda[r][i]);
+     ris *= conj(GC->lambda[r][i]); //4
    #endif
 
    return creal(ris);
@@ -194,22 +194,70 @@ double imagpartlink(Conf const * const GC,
 
 //Flux and monopole related stuff//
 //Flux through a plaquette//
+void remove_strings(double * flux)
+   {
+
+   double precision=1.0e-12;
+   while((fabs(*flux)-PI)>precision)
+      {
+      if(*flux>0)
+         {
+         *flux-=2*PI;
+         }
+      else
+         {
+         *flux+=2*PI;
+         }
+      }
+
+   }
+void print_links_cube(Conf const * const GC,
+        Geometry const * const geo,
+        long r)
+   {
+   int i;
+   long rr;
+   double angle;
+   for(i=0; i<STDIM; i++ )
+      {
+      angle=carg(GC->lambda[r][i]);
+      fprintf(stdout,"Link at r=%ld direction %d angle=%.4g \n", r, i,angle);
+      }
+   for(i=0; i<STDIM;i++)
+      {
+   rr=nnp(geo,r,i);
+   angle=carg(GC->lambda[rr][(i+1)%STDIM]);
+   fprintf(stdout,"Link at r=%ld+%d direction %d angle=%.4g \n", r, i, (i+1)%STDIM, angle);
+   angle=carg(GC->lambda[rr][(i+2)%STDIM]);
+   fprintf(stdout,"Link at r=%ld+%d direction %d angle=%.4g \n", r, i, (i+2)%STDIM,angle);
+      }
+
+   rr=nnp(geo,r,0);
+   rr=nnp(geo,rr,1);
+   rr=nnp(geo,rr,2);
+   for(i=0; i<STDIM; i++)
+      {
+      angle=carg(GC->lambda[nnm(geo,rr,i)][i]);
+      fprintf(stdout,"Link at r=%ld+0+1+2 direction %d angle=%.4g \n", r, i,angle);
+      }
+
+   }
 double flux_plaquette(Conf const * const GC,
         Geometry const * const geo,
         long r,
         int j,
         int i)
    {
-   double ris;
-   ris=0;
-   ris+=carg(GC->lambda[r][j]);
-   //fprintf(stderr, "amgle= %.4g \n",ris);
-   ris+=carg(GC->lambda[nnp(geo,r,j)][i]);
-   ris-=carg(GC->lambda[nnp(geo,r,i)][j]);
-   ris-=carg((GC->lambda[r][i]));
+   double flux;
+   flux=0;
+   flux+=carg(GC->lambda[r][j]);
+   flux+=carg(GC->lambda[nnp(geo,r,j)][i]);
+   flux-=carg(GC->lambda[nnp(geo,r,i)][j]);
+   flux-=carg((GC->lambda[r][i]));
 
+   remove_strings(&flux);
 
-   return(fmod(ris,2*PI));
+   return(flux);
    }
 
 //Monopoles inside a cube//
@@ -237,7 +285,7 @@ double flux_plaquette(Conf const * const GC,
 
                */
 
-long monpoles_cube(Conf const * const GC,
+int monpoles_cube(Conf const * const GC,
         Geometry const * const geo,
         long r,
         GParam const * const param)
@@ -255,12 +303,14 @@ long monpoles_cube(Conf const * const GC,
    flux-=flux_plaquette(GC,geo,nnp(geo,r,2),0,1);  //top (flow points outside)
    flux-=flux_plaquette(GC,geo,nnp(geo,r,0),1,2);  //right (flow points outside)
 
-   ris=(int)(flux/(2*PI-0.01));
+   ris=(int)round(flux/(2*PI));
 
 #ifdef DEBUG
    if(abs(ris)>0)
    {
-   fprintf(stderr, " %d Monopoles at r=%ld flux= %.8g \n",ris,r,flux);
+   //fprintf(stderr, " %d Monopoles at r=%ld flux= %.8g \n",ris,r,flux);
+   //print_links_cube(GC,geo,r);
+   //exit(EXIT_FAILURE);
    }
 #endif
 
@@ -276,7 +326,7 @@ long measure_monopoles(Conf const * const GC,
 
    for(r=0; r<param->d_volume; r++)
       {
-      monopoles+=monpoles_cube(GC,geo,r,param);
+      monopoles+=abs(monpoles_cube(GC,geo,r,param));
       }
    return(monopoles);
    }
@@ -290,14 +340,14 @@ long action_monopoles(Conf const * const GC,
    long rr,monopoles;
 
    monopoles=0;
-   monopoles+=monpoles_cube(GC,geo,r,param);
+   monopoles+=abs(monpoles_cube(GC,geo,r,param));
    rr=nnm(geo,r,(i+1)%STDIM);
-   monopoles+=monpoles_cube(GC,geo,rr,param);
+   monopoles+=abs(monpoles_cube(GC,geo,rr,param));
    rr=nnm(geo,r,(i+2)%STDIM);
-   monopoles+=monpoles_cube(GC,geo,rr,param);
+   monopoles+=abs(monpoles_cube(GC,geo,rr,param));
    rr=nnm(geo,r,(i+1)%STDIM);
    rr=nnm(geo,rr,(i+2)%STDIM);
-   monopoles+=monpoles_cube(GC,geo,rr,param);
+   monopoles+=abs(monpoles_cube(GC,geo,rr,param));
 
    return(monopoles);
    }
@@ -540,7 +590,7 @@ void perform_measures(Conf *GC,
    fprintf(datafilep, "%.12g %.12g ", tildeG0_t, tildeGminp_t);
    fprintf(datafilep, "%.12g %.12g ", tildeG0_v, tildeGminp_v);
    fprintf(datafilep, "%.12g %.12g ", scalar_coupling, plaq);
-   fprintf(datafilep, "%.12g %ld", relink,monopoles);
+   fprintf(datafilep, "%.12g %ld", relink, monopoles);
    fprintf(datafilep, "\n");
 
    fflush(datafilep);
