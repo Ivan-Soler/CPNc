@@ -59,6 +59,32 @@ void init_conf(Conf *GC,
   		     }
 	#endif
 
+  	//allocating magnetic charge
+   err=posix_memalign((void**) &(GC->charge), (size_t) INT_ALIGN, (size_t) param->d_volume * sizeof(int));
+   if(err!=0)
+     {
+     fprintf(stderr, "Problems in allocating the lattice! (%s, %d)\n", __FILE__, __LINE__);
+     exit(EXIT_FAILURE);
+     }
+
+   //allocating fluxes plaquettes
+   err=posix_memalign((void**) &(GC->flux), (size_t) DOUBLE_ALIGN, (size_t) param->d_volume * sizeof(double *));
+     if(err!=0)
+       {
+       fprintf(stderr, "Problems in allocating the lattice! (%s, %d)\n", __FILE__, __LINE__);
+       exit(EXIT_FAILURE);
+       }
+     for(r=0; r<(param->d_volume); r++)
+        {
+        err=posix_memalign((void**)&(GC->flux[r]), (size_t) DOUBLE_ALIGN, (size_t )STDIM * sizeof(double));
+        if(err!=0)
+          {
+          fprintf(stderr, "Problems in allocating the lattice! (%s, %d)\n", __FILE__, __LINE__);
+          exit(EXIT_FAILURE);
+          }
+        }
+
+
   err=posix_memalign((void**) &(GC->phi), (size_t) DOUBLE_ALIGN, (size_t) param->d_volume * sizeof(Vec));
   if(err!=0)
     {
@@ -111,7 +137,7 @@ void init_conf(Conf *GC,
     delta=0.1;
     theta=PI-delta/4;
 
-    r=10;
+    r=0;
 
     fprintf(stderr, "Monopole inserted at: ");
     fprintf(stderr, "%ld \n ", r);
@@ -153,6 +179,26 @@ void init_conf(Conf *GC,
     read_conf(GC, param);
     }
 
+  Geometry geo;
+  init_geometry(&geo, param);
+  for(r=0; r<param->d_volume;r++)
+     {
+     GC->charge[r]=monpoles_cube(GC,&geo,r,param);
+     }
+
+  for(r=0; r<param->d_volume;r++)
+     {
+     int p,i,j;
+     p=0;
+     for (j=1;j<STDIM; j++)
+        for(i=0;i<j; i++)
+        {
+        GC->flux[r][p]=flux_plaquette(GC,&geo,r,i,j);
+        p+=1;
+        }
+     }
+
+
 
   #ifdef LINKS_FIXED_TO_ONE
     for(r=0; r<(param->d_volume); r++)
@@ -170,6 +216,17 @@ void init_conf(Conf *GC,
        GC->lambda[r][0]=1.0;
        }
   #endif
+  }
+
+void update_charge(Conf *GC,
+      Geometry const * const geo,
+      GParam const * const param)
+   {
+   int r;
+   for(r=0; r<param->d_volume;r++)
+      {
+      GC->charge[r]=monpoles_cube(GC,geo,r,param);
+      }
   }
 
 void restart_gauge_conf(Conf *GC,

@@ -260,6 +260,44 @@ double flux_plaquette(Conf const * const GC,
    return(flux);
    }
 
+double flux_plaquette_new(Conf const * const GC,
+        Geometry const * const geo,
+        long r,
+        int j,
+        int i,
+        double angle_new)
+   {
+   double flux;
+   flux=0;
+   flux+=angle_new;
+   flux+=carg(GC->lambda[nnp(geo,r,j)][i]);
+   flux-=carg(GC->lambda[nnp(geo,r,i)][j]);
+   flux-=carg((GC->lambda[r][i]));
+
+   remove_strings(&flux);
+
+   return(flux);
+   }
+
+double flux_inverted_plaquette_new(Conf const * const GC,
+        Geometry const * const geo,
+        long r,
+        int j,
+        int i,
+        double angle_new)
+   {
+   double flux;
+   flux=0;
+   flux+=carg(GC->lambda[r][j]);
+   flux+=carg(GC->lambda[nnp(geo,r,j)][i]);
+   flux-=angle_new;
+   flux-=carg((GC->lambda[r][i]));
+
+   remove_strings(&flux);
+
+   return(flux);
+   }
+
 //Monopoles inside a cube//
 
 /*
@@ -284,6 +322,64 @@ double flux_plaquette(Conf const * const GC,
 
 
                */
+
+int local_action_monopoles(Conf const *GC,
+      Geometry const * geo,
+      long r,
+      int i,
+      double angle_new,
+      int Q[4])
+   {
+
+   int deltaQ;
+   double old_flux[4];
+   double new_flux[4];
+   double delta_flux[4];
+   int j, k;
+   long rr;
+
+   j=(i+1)%STDIM;
+   k=(j+1)%STDIM;
+
+   old_flux[0]=flux_plaquette(GC,geo,r,i,j);
+   old_flux[1]=flux_plaquette(GC,geo,nnm(geo,r,k),i,k);
+   old_flux[2]=flux_plaquette(GC,geo,nnm(geo,r,j),i,j);
+   old_flux[3]=flux_plaquette(GC,geo,r,i,k);
+
+   new_flux[0]=flux_plaquette_new(GC,geo,r,i,j,angle_new);
+   new_flux[1]=flux_inverted_plaquette_new(GC,geo,nnm(geo,r,k),i,k,angle_new);
+   new_flux[2]=flux_inverted_plaquette_new(GC,geo,nnm(geo,r,j),i,j,angle_new);
+   new_flux[3]=flux_plaquette_new(GC,geo,r,i,k,angle_new);
+
+   delta_flux[0]=-old_flux[0]+new_flux[0];
+   delta_flux[1]=-old_flux[1]+new_flux[1];
+   delta_flux[2]=-old_flux[2]+new_flux[2];
+   delta_flux[3]=-old_flux[3]+new_flux[3];
+
+   Q[0]=(int) round((GC->charge[r]*2*PI+delta_flux[0]-delta_flux[3])/(2*PI));
+   deltaQ=abs(Q[0])-abs(GC->charge[r]);
+   fprintf(stderr,"Q[0], Q[r], deltaQ %d, %d, %d \n",Q[0], GC->charge[rr], deltaQ);
+
+   rr=nnm(geo,r,k);
+   Q[1]= (int) round((GC->charge[rr]*2*PI-delta_flux[0]-delta_flux[1])/(2*PI));
+   deltaQ+=abs(Q[1])-abs(GC->charge[rr]);
+   fprintf(stderr,"Q[1], Q[r], deltaQ %d, %d, %d \n",Q[1], GC->charge[rr], deltaQ);
+
+   rr=nnm(geo,nnm(geo,r,k),j);
+   Q[2]= (int) round((GC->charge[rr]*2*PI-delta_flux[2]+delta_flux[1])/(2*PI));
+   deltaQ+=abs(Q[2])-abs(GC->charge[rr]);
+   fprintf(stderr,"Q[2], Q[r], deltaQ %d, %d, %d \n",Q[2], GC->charge[rr],deltaQ);
+
+   rr=nnm(geo,r,j);
+   Q[3]= (int) round((GC->charge[rr]*2*PI+delta_flux[2]+delta_flux[3])/(2*PI));
+   deltaQ+=abs(Q[3])-abs(GC->charge[rr]);
+
+   //fprintf(stderr,"r, Q[r], delta_flux_1, delta_flux_2 \n %ld, %d, %.4g, %.4g \n",r,GC->charge[r],delta_flux[0],delta_flux[3]);
+   fprintf(stderr,"Q[3], Q[r], deltaQ %d, %d, %d \n",Q[3], GC->charge[rr],deltaQ);
+
+   return (deltaQ);
+
+   }
 
 int monpoles_cube(Conf const * const GC,
         Geometry const * const geo,
