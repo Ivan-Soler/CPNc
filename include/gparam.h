@@ -41,6 +41,8 @@ typedef struct GParam {
   //for smearing and blocking
   int smearing_steps;
   double alpha;
+  double blockcoeff;
+  int numblock;
 
   // output file names
   char d_conf_file[STD_STRING_LENGTH];

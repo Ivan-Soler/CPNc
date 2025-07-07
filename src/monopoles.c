@@ -207,11 +207,169 @@ void spatial_smearing(Conf const * const GC,
   free_conf(&staple_GC, param);
   }
 
+// compute blocked link for a given site
+void spatialblocking_singlesite(Conf const * const GC,
+                                Geometry const * const geo,
+                                GParam const * const param,
+                                long r,
+                                int i,
+                                complex * U)
+  {
+  int j;
+  long k, k1;
+
+  complex link1, link2, link3, link4, stap;
+
+  #ifdef DEBUG
+  if(r >= param->d_volume)
+    {
+    fprintf(stderr, "r too large: %ld >= %ld (%s, %d)\n", r, param->d_volume, __FILE__, __LINE__);
+    exit(EXIT_FAILURE);
+    }
+  if(i >= STDIM)
+    {
+    fprintf(stderr, "i too large: i=%d >= %d (%s, %d)\n", i, STDIM, __FILE__, __LINE__);
+    exit(EXIT_FAILURE);
+    }
+  if(i == 0)
+    {
+    fprintf(stderr, "time direction selected: i=%d (%s, %d)\n", i, __FILE__, __LINE__);
+    exit(EXIT_FAILURE);
+    }
+  #endif
+
+  j = (i==1) ? 2 : 1; //Check the dir perpendicular to time and chosen link
+//
+//       i ^
+//         |    (1)
+//         +----->-----+
+//         |           |
+//         |           V (2)
+//         |           |
+//         |           |
+//       k +-----------+
+//         |           |
+//         |           |
+//         |           V (3)
+//         |           |
+//         +-----<-----+-->   j
+//       r     (4)
+//
+
+    k=nnp(geo, r, i);
+    link1= GC->lambda[nnp(geo, k, i)][j];  // link1 = (1)
+    link2= GC->lambda[nnp(geo, k, j)][i];  // link2 = (2)
+    link3= GC->lambda[nnp(geo, r, j)][i];  // link3 = (3)
+    link4= GC->lambda[r][j];               // link3 = (4)
+
+    stap=link1*conj(link2)*conj(link3)*conj(link4);
+
+//
+//       i ^
+//         |   (1)
+//         +----<------+
+//         |           |
+//     (2) V           |
+//         |           |
+//      k1 +-----------+
+//         |           |
+//     (3) V           |
+//         |           |
+//         +------>----+--->j
+//        k     (4)    r
+//
+
+   k=nnm(geo, r, j);
+   k1=nnp(geo, k, i);
+
+   link1= GC->lambda[nnp(geo, k1, i)][j];  // link1 = (1)
+   link2= GC->lambda[k1][i];               // link2 = (2)
+   link3= GC->lambda[k][i];                // link3 = (3)
+   link4= GC->lambda[k][j];                // link4 = (4)
+
+   stap+=conj(link1)*conj(link2)*conj(link3)*link4;
+
+   *U=GC->lambda[r][i]*GC->lambda[nnp(geo, r, i)][i];
+   stap*=param->blockcoeff;
+   *U+=stap;
+
+
+   *U/=sqrt((double) (*U*conj(*U)));
+   }
+
+
+// create spatially blocked configurations (i.e. L_spatial->L_spatial/2)
+void init_spatial_blocked_conf(Conf *blockGC,
+                               Conf const * const GC,
+                               GParam const * const blockparam,
+                               Geometry const * const geo,
+                               GParam const * const param)
+  {
+
+  long rb, r;
+  int blockcart[STDIM], cart[STDIM];
+  int i, mu, err;
+  complex U;
+
+  for(i=1; i<STDIM; i++)
+     {
+     if(param->d_size[i] % 2 != 0)
+       {
+       fprintf(stderr, "Problem with spatial size not even: %d ! (%s, %d)\n", param->d_size[i], __FILE__, __LINE__);
+       exit(EXIT_FAILURE);
+       }
+     }
+
+  // allocate the lattice
+  err=posix_memalign((void**)&(blockGC->lambda), (size_t) DOUBLE_ALIGN, (size_t) blockparam->d_volume * sizeof(complex *));
+  if(err!=0)
+    {
+    fprintf(stderr, "Problems in allocating the lattice! (%s, %d)\n", __FILE__, __LINE__);
+    exit(EXIT_FAILURE);
+    }
+  for(r=0; r<(blockparam->d_volume); r++)
+     {
+     err=posix_memalign((void**)&(blockGC->lambda[r]), (size_t) DOUBLE_ALIGN, (size_t) STDIM * sizeof(complex));
+     if(err!=0)
+       {
+       fprintf(stderr, "Problems in allocating the lattice! (%s, %d)\n", __FILE__, __LINE__);
+       exit(EXIT_FAILURE);
+       }
+     }
+
+  // initialize GC
+  for(rb=0; rb<(blockparam->d_volume); rb++)
+     {
+     fprintf(stdout,"Blocked rb: %ld\n",rb);
+     si_to_cart(blockcart, rb, blockparam);
+     cart[0]=blockcart[0];
+     for(i=1; i<STDIM; i++)
+        {
+        cart[i]=2*blockcart[i];
+        }
+     r=cart_to_si(cart, param);
+
+     blockGC->lambda[rb][0]=GC->lambda[r][0];
+
+     for(mu=1; mu<STDIM; mu++)
+        {
+        // this is the real point where the blocking is performed
+        spatialblocking_singlesite(GC, geo, param, r, mu, &U);
+        blockGC->lambda[rb][mu]=U;
+        }
+     }
+  (void) geo;
+  blockGC->update_index=GC->update_index;
+  }
+
 void real_main(char *in_file)
     {
     Conf GC;
+    Conf blockGC;
     Geometry geo;
+    Geometry blockgeo;
     GParam param;
+    GParam blockparam;
 
     long count;
     FILE *datafilep;
@@ -221,6 +379,7 @@ void real_main(char *in_file)
     double acc_link_local, acc_site_local, acc_link_big_local;
     // read input file
     readinput(in_file, &param);
+    readinput(in_file, &blockparam);
 
     // initialize random generator
     initrand(param.d_randseed);
@@ -242,8 +401,23 @@ void real_main(char *in_file)
     // montecarlo
     time(&time1);
     measure_polyakov_corr(&GC,&geo,&param,datafilep);
-    spatial_smearing(&GC,&geo,&param);
-    measure_polyakov_corr(&GC,&geo,&param,datafilep);
+    int i;
+    long blockvol;
+    blockvol=param.d_size[0];
+    for(i=1; i<STDIM;i++)
+       {
+       blockparam.d_size[i]=param.d_size[i]/2;
+       blockvol*=blockparam.d_size[i];
+       fprintf(stdout,"Direction %d, blocked size %d\n",i,blockparam.d_size[i]);
+       }
+    blockparam.d_volume=blockvol;
+    blockparam.d_inv_vol=1.0/((double) blockparam.d_volume);
+    fprintf(stdout, "volume %ld, inverse volume %.4f \n",blockparam.d_volume,blockparam.d_inv_vol);
+
+    init_geometry(&blockgeo, &blockparam);
+    init_spatial_blocked_conf(&blockGC,&GC,&blockparam,&geo,&param);
+    spatial_smearing(&blockGC,&blockgeo,&blockparam);
+    measure_polyakov_corr(&blockGC,&blockgeo,&blockparam,datafilep);
     exit(EXIT_FAILURE);
     // count starts from 1 to avoid problems using %
     for(count=1; count < param.d_sample + 1; count++)
@@ -358,6 +532,8 @@ void print_template_input(void)
 
     fprintf(fp, "smearing_steps 2\n");
     fprintf(fp, "alpha_smearing 0.9\n");
+    fprintf(fp, "numblock 1\n");
+    fprintf(fp,"block_coeff 0.9\n");
 
     fprintf(fp,"\n");
     fprintf(fp, "epsilon_metro_site 0.8\n");

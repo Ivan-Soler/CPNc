@@ -269,6 +269,26 @@ void readinput(char *in_file, GParam *param)
                               }
                             param->alpha=temp_i;
                             }
+           else if(strncmp(str, "block_coeff", 11)==0)
+                           {
+                           err=fscanf(input, "%lf", &temp_d);
+                           if(err!=1)
+                             {
+                             fprintf(stderr, "Error in reading the file %s (%s, %d)\n", in_file, __FILE__, __LINE__);
+                             exit(EXIT_FAILURE);
+                             }
+                           param->blockcoeff=temp_i;
+                           }
+           else if(strncmp(str, "numblock", 8)==0)
+                            {
+                            err=fscanf(input, "%d", &temp_i);
+                            if(err!=1)
+                              {
+                              fprintf(stderr, "Error in reading the file %s (%s, %d)\n", in_file, __FILE__, __LINE__);
+                              exit(EXIT_FAILURE);
+                              }
+                            param->numblock=temp_i;
+                            }
            //End reading smearing
            else if(strncmp(str, "start", 5)==0)
                   { 
