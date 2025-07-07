@@ -67,22 +67,6 @@ void init_conf(Conf *GC,
      exit(EXIT_FAILURE);
      }
 
-   //allocating fluxes plaquettes
-   err=posix_memalign((void**) &(GC->flux), (size_t) DOUBLE_ALIGN, (size_t) param->d_volume * sizeof(double *));
-     if(err!=0)
-       {
-       fprintf(stderr, "Problems in allocating the lattice! (%s, %d)\n", __FILE__, __LINE__);
-       exit(EXIT_FAILURE);
-       }
-     for(r=0; r<(param->d_volume); r++)
-        {
-        err=posix_memalign((void**)&(GC->flux[r]), (size_t) DOUBLE_ALIGN, (size_t )STDIM * sizeof(double));
-        if(err!=0)
-          {
-          fprintf(stderr, "Problems in allocating the lattice! (%s, %d)\n", __FILE__, __LINE__);
-          exit(EXIT_FAILURE);
-          }
-        }
 
 
   err=posix_memalign((void**) &(GC->phi), (size_t) DOUBLE_ALIGN, (size_t) param->d_volume * sizeof(Vec));
@@ -119,9 +103,15 @@ void init_conf(Conf *GC,
           theta=0;
           GC->lambda[r][j]=cos(theta)+I*sin(theta);
           }
+      #ifdef DEBUG
+       j=0;
+       theta=PI*(2.0*casuale()-1.0);
+       GC->lambda[r][j]=cos(theta)+I*sin(theta);
+      #endif
+
        }
 
-    #ifdef DEBUG
+    /*#ifdef DEBUG
     //we introduce monopole anti-monopole pairx  for checks
     Geometry geo;
     init_geometry(&geo, param);
@@ -152,7 +142,7 @@ void init_conf(Conf *GC,
     fprintf(stderr, "\n ");
     free_geometry(&geo, param);
 
-    #endif
+    #endif*/
     }
 
   if(param->d_start==1)  // random start
@@ -186,18 +176,6 @@ void init_conf(Conf *GC,
      GC->charge[r]=monpoles_cube(GC,&geo,r,param);
      }
 
-  for(r=0; r<param->d_volume;r++)
-     {
-     int p,i,j;
-     p=0;
-     for (j=1;j<STDIM; j++)
-        for(i=0;i<j; i++)
-        {
-        GC->flux[r][p]=flux_plaquette(GC,&geo,r,i,j);
-        p+=1;
-        }
-     }
-
 
 
   #ifdef LINKS_FIXED_TO_ONE
@@ -219,6 +197,30 @@ void init_conf(Conf *GC,
   }
 
 void update_charge(Conf *GC,
+      Geometry const * const geo,
+      int new_charges[4],
+      long r,
+      int i)
+ {
+   long rr;
+   int j,k;
+
+   j=(i+1)%STDIM;
+   k=(j+1)%STDIM;
+   GC->charge[r]=new_charges[0];
+
+   rr=nnm(geo,r,k);
+   GC->charge[rr]=new_charges[1];
+
+   rr=nnm(geo,nnm(geo,r,k),j);
+   GC->charge[rr]=new_charges[2];
+
+   rr=nnm(geo,r,j);
+   GC->charge[rr]=new_charges[3];
+
+  }
+
+void update_charge_test(Conf *GC,
       Geometry const * const geo,
       GParam const * const param)
    {
@@ -382,6 +384,23 @@ void equal_conf(Conf const * const GC, Conf *GC2,
 			GC2->lambda[r][i]=GC->lambda[r][i];
 		}
 	}
+}
+
+void equal_gauge_conf(Conf const * const GC, Conf *GC2,
+               GParam const * const param)
+{
+   long r;
+   int i;
+
+   GC2->update_index=GC->update_index;
+
+   for(r=0; r<param->d_volume; r++)
+   {
+      for(i=0; i<STDIM; i++)
+      {
+         GC2->lambda[r][i]=GC->lambda[r][i];
+      }
+   }
 }
 
 

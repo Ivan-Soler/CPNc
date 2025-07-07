@@ -20,6 +20,7 @@ typedef struct Conf {
   double complex *gauge;      // [volume] needed if GAUGE_FIX is defined
 
   FMatrix *Qh;                // [volume][Nflavors][Nflavors]q
+  int *charge;
   } Conf;
 
 inline double complex chargepow(double complex x)
@@ -48,6 +49,14 @@ inline double complex chargepow(double complex x)
 // in conf_def.c
 void init_conf(Conf *GC,
                GParam const * const param);
+void update_charge(Conf *GC,
+               Geometry const * const geo,
+               int new_charges[4],
+               long r,
+               int i);
+void update_charge_test(Conf *GC,
+      Geometry const * const geo,
+      GParam const * const param);
 void restart_gauge_conf(Conf *GC,
                GParam const * const param);
 void read_conf(Conf *GC,
@@ -56,6 +65,8 @@ void free_conf(Conf *GC,
                GParam const * const param);
 void equal_conf(Conf const * const GC, Conf *GC2,
 					GParam const * const param);
+void equal_gauge_conf(Conf const * const GC, Conf *GC2,
+               GParam const * const param);
 void write_conf_on_file_with_name(Conf const * const GC,
                                   GParam const * const param,
                                   char const * const namefile);
@@ -91,6 +102,15 @@ double complex plaqstaples_for_link(Conf *GC,
                                     Geometry const * const geo,
                                     long r,
                                     int i);
+void update_monopoles(Conf *GC,
+                        Geometry const * const geo,
+                        //long r,
+                        GParam const * const param);
+                       //int i
+                        //int charges[4])
+void update_fluxes(Conf *GC,
+      Geometry const * const geo,
+      GParam const * const param);
 int metropolis_for_link(Conf *GC,
                         Geometry const * const geo,
                         GParam const * const param,
@@ -142,12 +162,36 @@ double realpartlink(Conf const * const GC,
                     GParam const * const param);
 double imagpartlink(Conf const * const GC,
                     GParam const * const param);
+double angle_plaquette(Conf const * const GC,
+        Geometry const * const geo,
+        long r,
+        int i,
+        int j);
 double flux_plaquette(Conf const * const GC,
         Geometry const * const geo,
         long r,
         int i,
         int j);
-long monpoles_cube(Conf const * const GC,
+double flux_plaquette_string(Conf const * const GC,
+        Geometry const * const geo,
+        long r,
+        int i,
+        int j);
+double partial_flux_plaquette(Conf const * const GC,
+        Geometry const * const geo,
+        long r,
+        int i,
+        int j);
+double partial_flux_inverted_plaquette(Conf const * const GC,
+        Geometry const * const geo,
+        long r,
+        int i,
+        int j);
+void remove_strings(double * flux);
+void print_links_cube(Conf const * const GC,
+        Geometry const * const geo,
+        long r);
+int monpoles_cube(Conf const * const GC,
         Geometry const * const geo,
         long r,
         GParam const * const param);
@@ -159,6 +203,25 @@ long action_monopoles(Conf const * const GC,
         GParam const * const param,
         long r,
         int i);
+int local_action_monopoles(Conf const * const GC,
+        Geometry const * const geo,
+        long r,
+        int i,
+        double angle_new,
+        int Q[4]);
+int ind_to_face(int i, int j);
+int local_action_plaquette_monopole(Conf const * const GC,
+        Geometry const * const geo,
+        long r,
+        int i, int j, long rr,
+        double angle,
+        int * charge1, int * charge2);
+int local_action_inverted_plaquette_monopole(Conf const * const GC,
+        Geometry const * const geo,
+        long r,
+        int i, int j, long rr,
+        double angle,
+        int * charge1, int * charge2);
 void compute_flavour_observables_tensor(Conf const * const GC,
                                         GParam const * const param,
                                         double *tildeG0,

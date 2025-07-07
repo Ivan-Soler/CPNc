@@ -211,7 +211,6 @@ inline void unitarize_Vec(Vec * restrict A)
   times_equal_real_Vec(A, 1./norm);
   }
 
-
 // random vector (normalized)
 void rand_vec_Vec(Vec * restrict A);
 

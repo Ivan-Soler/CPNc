@@ -247,7 +247,29 @@ void readinput(char *in_file, GParam *param)
                              param->d_quench_overrelax=temp_i;
                              }
            //#endif
-          
+
+           //Reading smearing and blocking
+           else if(strncmp(str, "smearing_steps", 14)==0)
+                            {
+                            err=fscanf(input, "%d", &temp_i);
+                            if(err!=1)
+                              {
+                              fprintf(stderr, "Error in reading the file %s (%s, %d)\n", in_file, __FILE__, __LINE__);
+                              exit(EXIT_FAILURE);
+                              }
+                            param->smearing_steps=temp_i;
+                            }
+           else if(strncmp(str, "alpha_smearing", 14)==0)
+                            {
+                            err=fscanf(input, "%lf", &temp_d);
+                            if(err!=1)
+                              {
+                              fprintf(stderr, "Error in reading the file %s (%s, %d)\n", in_file, __FILE__, __LINE__);
+                              exit(EXIT_FAILURE);
+                              }
+                            param->alpha=temp_i;
+                            }
+           //End reading smearing
            else if(strncmp(str, "start", 5)==0)
                   { 
                   err=fscanf(input, "%d", &temp_i);
@@ -493,6 +515,9 @@ void print_parameters(GParam const * const param,
       fprintf(fp, "quench_measevery: %d\n", param->d_quench_measevery);
       fprintf(fp, "\n");
     #endif
+
+    fprintf(fp, "Smearing steps:          %d\n",param->smearing_steps);
+    fprintf(fp, "Alpha smearing:          %.4lf\n",param->alpha);
 
     fprintf(fp, "start:                   %d\n", param->d_start);
     fprintf(fp, "saveconf_back_every:     %d\n", param->d_saveconf_back_every);

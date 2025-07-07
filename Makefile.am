@@ -1,4 +1,5 @@
-bin_PROGRAMS = cpn_c
+bin_PROGRAMS = cpn_c \
+	       monopoles
 
 conf = ./include/conf.h \
        ./lib/conf_def.c \
@@ -49,6 +50,18 @@ cpn_c_SOURCES=./src/cpn_c.c \
                ./include/macro.h \
                $(random) \
                $(vec) 
+
+monopoles_SOURCES=./src/monopoles.c \
+               $(conf) \
+               $(dSFMT) \
+               $(endian) \
+               $(flavourmatrix) \
+               $(geometry) \
+               $(gparam) \
+               ./include/macro.h \
+               $(random) \
+               $(vec)
+
 
 AM_CFLAGS = -std=c99 -O2 -Wall -Wextra -Werror -pedantic -Wconversion
 

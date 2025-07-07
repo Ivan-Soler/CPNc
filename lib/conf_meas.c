@@ -249,8 +249,7 @@ double flux_plaquette(Conf const * const GC,
         int i)
    {
    double flux;
-   flux=0;
-   flux+=carg(GC->lambda[r][j]);
+   flux=carg(GC->lambda[r][j]);
    flux+=carg(GC->lambda[nnp(geo,r,j)][i]);
    flux-=carg(GC->lambda[nnp(geo,r,i)][j]);
    flux-=carg((GC->lambda[r][i]));
@@ -268,8 +267,7 @@ double flux_plaquette_new(Conf const * const GC,
         double angle_new)
    {
    double flux;
-   flux=0;
-   flux+=angle_new;
+   flux=angle_new;
    flux+=carg(GC->lambda[nnp(geo,r,j)][i]);
    flux-=carg(GC->lambda[nnp(geo,r,i)][j]);
    flux-=carg((GC->lambda[r][i]));
@@ -287,8 +285,7 @@ double flux_inverted_plaquette_new(Conf const * const GC,
         double angle_new)
    {
    double flux;
-   flux=0;
-   flux+=carg(GC->lambda[r][j]);
+   flux=carg(GC->lambda[r][j]);
    flux+=carg(GC->lambda[nnp(geo,r,j)][i]);
    flux-=angle_new;
    flux-=carg((GC->lambda[r][i]));
@@ -298,30 +295,6 @@ double flux_inverted_plaquette_new(Conf const * const GC,
    return(flux);
    }
 
-//Monopoles inside a cube//
-
-/*
- *   +----------+
-    /         / |
-   +----<----+  |
-   |         |  +
-   V         ^ /
-   |         |/
-   +---->----+
-
-
-
-
-   ^  (2)
-   |
-   |     (1)
-   |  /
-   | /
-   |/
-   +-------------> (0)
-
-
-               */
 
 int local_action_monopoles(Conf const *GC,
       Geometry const * geo,
@@ -358,28 +331,48 @@ int local_action_monopoles(Conf const *GC,
 
    Q[0]=(int) round((GC->charge[r]*2*PI+delta_flux[0]-delta_flux[3])/(2*PI));
    deltaQ=abs(Q[0])-abs(GC->charge[r]);
-   fprintf(stderr,"Q[0], Q[r], deltaQ %d, %d, %d \n",Q[0], GC->charge[rr], deltaQ);
 
    rr=nnm(geo,r,k);
    Q[1]= (int) round((GC->charge[rr]*2*PI-delta_flux[0]-delta_flux[1])/(2*PI));
    deltaQ+=abs(Q[1])-abs(GC->charge[rr]);
-   fprintf(stderr,"Q[1], Q[r], deltaQ %d, %d, %d \n",Q[1], GC->charge[rr], deltaQ);
 
    rr=nnm(geo,nnm(geo,r,k),j);
    Q[2]= (int) round((GC->charge[rr]*2*PI-delta_flux[2]+delta_flux[1])/(2*PI));
    deltaQ+=abs(Q[2])-abs(GC->charge[rr]);
-   fprintf(stderr,"Q[2], Q[r], deltaQ %d, %d, %d \n",Q[2], GC->charge[rr],deltaQ);
 
    rr=nnm(geo,r,j);
    Q[3]= (int) round((GC->charge[rr]*2*PI+delta_flux[2]+delta_flux[3])/(2*PI));
    deltaQ+=abs(Q[3])-abs(GC->charge[rr]);
 
-   //fprintf(stderr,"r, Q[r], delta_flux_1, delta_flux_2 \n %ld, %d, %.4g, %.4g \n",r,GC->charge[r],delta_flux[0],delta_flux[3]);
-   fprintf(stderr,"Q[3], Q[r], deltaQ %d, %d, %d \n",Q[3], GC->charge[rr],deltaQ);
-
    return (deltaQ);
 
    }
+
+
+//Monopoles inside a cube//
+
+/*
+ *   +----------+
+    /         / |
+   +----<----+  |
+   |         |  +
+   V         ^ /
+   |         |/
+   +---->----+
+
+
+
+
+   ^  (2)
+   |
+   |     (1)
+   |  /
+   | /
+   |/
+   +-------------> (0)
+
+
+               */
 
 int monpoles_cube(Conf const * const GC,
         Geometry const * const geo,
@@ -390,8 +383,7 @@ int monpoles_cube(Conf const * const GC,
    int ris;
 
    (void) param;
-   flux=0;
-   flux-=flux_plaquette(GC,geo,r,0,2);  //front (flow points outside)
+   flux=-flux_plaquette(GC,geo,r,0,2);  //front (flow points outside)
    flux+=flux_plaquette(GC,geo,r,0,1);  //bottom (flow points inside)
    flux+=flux_plaquette(GC,geo,r,1,2);  //left  (flow points inside)
 
@@ -677,6 +669,7 @@ void perform_measures(Conf *GC,
    tildeG0_t=buffer[2];
    tildeGminp_t=buffer[3];
 	#endif
+
    scalar_coupling=higgs_interaction(GC, geo, param);
    plaq=plaquette(GC, geo, param);
    relink=realpartlink(GC, param);

@@ -317,21 +317,19 @@ int metropolis_for_link(Conf *GC,
   old_energy =-2.0*(double)NFLAVOUR*(param->d_J)*creal(sc*chargepow(old_lambda) );
   old_energy-=2.0*param->d_K*creal(old_lambda*pstaple);
   old_energy-= param->d_masssq * creal(old_lambda);
- // old_energy+= param->d_chemical * (double) action_monopoles(GC,geo,param,r,i);
 
   new_lambda = old_lambda*cexp(I*param->d_epsilon_metro_link*(2.0*casuale()-1));
-  //GC->lambda[r][i] = new_lambda;
 
   new_energy=-2.0*(double)NFLAVOUR*(param->d_J)*creal(sc*chargepow(new_lambda) );
   new_energy-=2.0*param->d_K*creal(new_lambda*pstaple);
   new_energy-= param->d_masssq * creal(new_lambda);
 
-  long charges_tmp;
-  charges_tmp=local_action_monopoles(GC,geo,r,i,carg(new_lambda),new_charges);
-  new_energy+= param->d_chemical * (double)  charges_tmp;
+  new_energy-= param->d_chemical * (double) local_action_monopoles(GC,geo,r,i,carg(new_lambda),new_charges);
 
   #ifdef DEBUG
   double old_energy_aux, new_energy_aux;
+  long charges_tmp;
+  charges_tmp= local_action_monopoles(GC,geo,r,i,carg(new_lambda),new_charges);
 
   GC->lambda[r][i] = new_lambda;
   new_energy_aux = -2.0 * (double)NFLAVOUR *(param->d_J)*higgs_interaction(GC, geo, param)*(double)STDIM * (double)param->d_volume;
@@ -339,7 +337,7 @@ int metropolis_for_link(Conf *GC,
   new_energy_aux -= param->d_masssq *creal(new_lambda);
   long charges_new;
   charges_new= measure_monopoles(GC,geo,param);
-  new_energy_aux += param->d_chemical* (double) charges_new;
+  new_energy_aux -= param->d_chemical* (double) charges_new;
 
   GC->lambda[r][i] = old_lambda;
   old_energy_aux = -2.0 * (double)NFLAVOUR *(param->d_J)*higgs_interaction(GC, geo, param)*(double)STDIM * (double)param->d_volume;
@@ -347,7 +345,7 @@ int metropolis_for_link(Conf *GC,
   old_energy_aux -= param->d_masssq * creal(old_lambda);
   long charges_old;
   charges_old= measure_monopoles(GC,geo,param);
-  old_energy_aux += param->d_chemical* (double)  charges_old ;
+  old_energy_aux -= param->d_chemical* (double)  charges_old ;
 
 
   if(fabs(old_energy-new_energy -(old_energy_aux-new_energy_aux))>1.0e-10 )
@@ -357,27 +355,35 @@ int metropolis_for_link(Conf *GC,
     exit(EXIT_FAILURE);
     }
   #endif
-
   if(old_energy>new_energy)
     {
     GC->lambda[r][i] = new_lambda;
-    update_charge(GC,geo,param);
-    fprintf(stderr,"accepted \n");
+    update_charge(GC,geo,new_charges,r,i);
+    //update_charge_test(GC,geo,param);
     acc=1;
+
     }
   else if(casuale()< exp(old_energy-new_energy) )
-         {
-         GC->lambda[r][i] = new_lambda;
-         update_charge(GC,geo,param);
-         fprintf(stderr,"accepted \n");
-         acc=1;
-         }
+      {
+      GC->lambda[r][i] = new_lambda;
+      update_charge(GC,geo,new_charges,r,i);
+      //update_charge_test(GC,geo,param);
+      acc=1;
+      }
   else
      {
-     GC->lambda[r][i]=old_lambda;
      acc=0;
      }
 
+#ifdef DEBUG
+  if (acc==1){
+      if ( abs( (int) charges_new-(int) measure_monopoles(GC,geo,param))>0)
+          {
+          fprintf(stderr,"Problem in updating monopoles %ld %ld \n", charges_new, measure_monopoles(GC,geo,param));
+          exit(EXIT_FAILURE);
+          }
+      }
+#endif
   return acc;
   }
 

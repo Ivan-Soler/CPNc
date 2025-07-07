@@ -1,5 +1,5 @@
-#ifndef CPN_C_C
-#define CPN_C_C
+#ifndef MONOPOLES_C
+#define MONOPOLES_C
 
 #include"../include/macro.h"
 
@@ -13,23 +13,212 @@
 #include"../include/gparam.h"
 #include"../include/random.h"
 
+complex space_polyakov(Conf const * const GC,
+                    Geometry const * const geo,
+                    GParam const * const param,
+                    long r,
+                    int dir)
+   {
+   int i;
+   double complex poly;
+   poly=1.0+0.0*I;
+
+   for(i=0; i<param->d_size[dir];i++)
+      {
+      poly*=GC->lambda[r][dir];
+      r=nnp(geo,r,dir);
+      }
+   return poly;
+   }
+
+complex polyakov_averaged(Conf const * const GC,
+                       Geometry const * const geo,
+                       GParam const * const param,
+                       int dir,
+                       long r)
+   {
+   int dir2,i;
+   long r2;
+   double complex poly_av;
+   r2=r;
+   poly_av=0;
+
+   dir2 = (dir==1) ? 2 : 1; //Check the dir perpendicular to time and the polyakov line
+
+   for(i=0; i<param->d_size[dir2]; i++)
+      {
+      poly_av+=space_polyakov(GC,geo,param,r,dir);
+      r2=nnp(geo,r2,dir2);
+      }
+   poly_av/=param->d_size[dir2];
+   return poly_av;
+
+   }
+
+void polyakov_time_sliced(Conf const * const GC,
+                          Geometry const * const geo,
+                          GParam const * const param,
+                          complex * poly)
+   {
+   long r;
+   int t;
+
+   r=0;
+   for(t=0; t<param->d_size[0]; t++)
+      {
+         poly[t]= polyakov_averaged(GC,geo,param,1,r);
+         poly[t]+= polyakov_averaged(GC,geo,param,2,r);
+         poly[t]/=2;
+         r=nnp(geo,r,0);
+      }
+   }
+
+void measure_polyakov_corr(Conf const * const GC,
+                           Geometry const * const geo,
+                           GParam const * const param,
+                           FILE *datafilep)
+      {
+   int t1, t2, t;
+   double corr_poly;
+   complex poly[param->d_size[0]];
+
+
+   polyakov_time_sliced(GC,geo,param,poly);
+
+   for(t = 0; t<param->d_size[0]/2; t++)
+        {
+        corr_poly = 0.0;
+        for(t1 = 0; t1<param->d_size[0]; t1++)
+           {
+           t2=(t1+t) % param->d_size[0];
+           corr_poly += creal(conj(poly[t2])*poly[t1]);
+           }
+        corr_poly/=(double) param->d_size[0];
+
+        fprintf(datafilep, " %.12f", corr_poly);
+        }
+   fprintf(datafilep, "\n");
+   fflush(datafilep);
+   }
+
+void staples_wilson_no_time(Conf const * const GC,
+                                Geometry const * const geo,
+                                long r,
+                                int i,
+                                complex * U)
+  {
+  int j, l;
+  long k;
+  complex link1, link2, link3, link12, stap;
+
+  for(l=i+1; l< i + STDIM; l++)
+     {
+     j = (l % STDIM);
+
+     if(j!=0)
+       {
+
+//
+//       i ^
+//         |   (1)
+//         +----->-----+
+//         |           |
+//                     |
+//         |           V (2)
+//                     |
+//         |           |
+//         +-----<-----+-->   j
+//       r     (3)
+//
+
+       link1=GC->lambda[nnp(geo, r, i)][j];  // link1 = (1)
+       link2= GC->lambda[nnp(geo, r, j)][i];  // link2 = (2)
+       link3= GC->lambda[r][j];               // link3 = (3)
+
+       link12=link1*conj(link2);  // link12=link1*link2^{dag}
+       stap=link12*conj(link3);   // stap=link12*stap^{dag} (typo to link3)
+
+       *U=stap;
+
+//
+//       i ^
+//         |   (1)
+//         |----<------+
+//         |           |
+//         |
+//     (2) V           |
+//         |
+//         |           |
+//         +------>----+--->j
+//        k     (3)    r
+//
+
+       k=nnm(geo, r, j);
+
+       link1=GC->lambda[nnp(geo, k, i)][j];  // link1 = (1)
+       link2=GC->lambda[k][i];               // link2 = (2)
+       link3=GC->lambda[k][j];               // link3 = (3)
+
+       link12=conj(link1*link2); // link12=link1^{dag}*link2^{dag}
+       stap=link12*link3;        // stap=link12*link3
+
+       *U+=stap;
+       }
+     }
+   }
+
+
+// perform smearing on spatial links
+void spatial_smearing(Conf const * const GC,
+                      Geometry const * const geo,
+                      GParam const * const param)
+  {
+  int i, step;
+  long r;
+  complex U;
+  Conf staple_GC;
+  U=0;
+
+  init_conf(&staple_GC,param);
+  equal_gauge_conf(GC,&staple_GC,param);
+
+  for(step=0; step<param->smearing_steps; step++)
+     {
+     for(r = 0; r < param->d_volume; r++)
+        {
+        for(i = 1; i < STDIM; i++)
+           {
+           staples_wilson_no_time(GC, geo, r, i, &U);
+           staple_GC.lambda[r][i]=U;
+           }
+        }
+
+     for(r = 0; r < param->d_volume; r++)
+        {
+        for(i = 1; i < STDIM; i++)
+           {
+           staple_GC.lambda[r][i]*=param->alpha;
+           GC->lambda[r][i]+=conj(staple_GC.lambda[r][i]);
+           GC->lambda[r][i]/=sqrt((double) (GC->lambda[r][i]*conj(GC->lambda[r][i]))); //Reunitarize
+           }
+        }
+     }
+
+  free_conf(&staple_GC, param);
+  }
+
 void real_main(char *in_file)
     {
     Conf GC;
-	#ifdef GAUGE_FIX
-	  Conf GC2; //Needed for Overlap variables
-	#endif
     Geometry geo;
     GParam param;
 
     long count;
     FILE *datafilep;
-    FILE *datafilep2;
 
     time_t time1, time2;
     double acc_link, acc_site, acc_link_big;
     double acc_link_local, acc_site_local, acc_link_big_local;
-    double quench_acc=0.0;
     // read input file
     readinput(in_file, &param);
 
@@ -39,21 +228,11 @@ void real_main(char *in_file)
     // open data_file
     init_data_file(&datafilep, &param);
 
-
-    //for checking the two gauge fixing chain separately
-    GParam param2;
-    readinput(in_file, &param2);
-    strcpy(param2.d_conf_file,strcat(param.d_conf_file,"_r2"));
-    strcpy(param2.d_log_file,strcat(param.d_log_file,"_r2"));
-    strcpy(param2.d_data_file,strcat(param.d_data_file,"_r2"));
-    init_data_file(&datafilep2, &param2);
-
     // initialize geometry
     init_geometry(&geo, &param);
 
     // initialize configuration
     init_conf(&GC, &param);
-
 
     // acceptance
     acc_link=0.0;
@@ -62,6 +241,10 @@ void real_main(char *in_file)
 
     // montecarlo
     time(&time1);
+    measure_polyakov_corr(&GC,&geo,&param,datafilep);
+    spatial_smearing(&GC,&geo,&param);
+    measure_polyakov_corr(&GC,&geo,&param,datafilep);
+    exit(EXIT_FAILURE);
     // count starts from 1 to avoid problems using %
     for(count=1; count < param.d_sample + 1; count++)
        {
@@ -92,10 +275,10 @@ void real_main(char *in_file)
          if(acc_link_local>0.33)
            {
            param.d_epsilon_metro_link*=1.1;
-	   if(param.d_epsilon_metro_link>1.0)
-	     {
-	       param.d_epsilon_metro_link=1.0;
-	     }
+      if(param.d_epsilon_metro_link>1.0)
+        {
+          param.d_epsilon_metro_link=1.0;
+        }
            }
          else
            {
@@ -105,11 +288,7 @@ void real_main(char *in_file)
 
        if(count % param.d_measevery ==0 && count > param.d_thermal)
          {
-		#ifndef GAUGE_FIX
-    	   perform_measures(&GC, &param, &geo, datafilep);
-		#else
-		  quench_acc += glass_evolution_and_meas(&GC, &GC2, &param, &geo, datafilep,datafilep2);
-		#endif
+          measure_polyakov_corr(&GC,&geo,&param,datafilep);
          }
 
        // save configuration for backup
@@ -126,12 +305,13 @@ void real_main(char *in_file)
          }
        }
     time(&time2);
-    // montecarlo end
 
     acc_site/=(double)(param.d_sample-param.d_thermal);
     acc_link/=(double)(param.d_sample-param.d_thermal);
     acc_link_big/=(double)(param.d_sample-param.d_thermal);
-    quench_acc/=(double)((param.d_sample-param.d_thermal)/param.d_measevery);
+
+
+
     // close data file
     fclose(datafilep);
 
@@ -140,13 +320,8 @@ void real_main(char *in_file)
       {
       write_conf_on_file(&GC, &param);
       }
-    //for (int r=0; r<param.d_volume; r++)
-    //	for (int i=0; i<STDIM; i++)
-    //	{
-    //		fprintf(stderr, "%d \t %d \t %.4f \n", r, i, creal(GC.lambda[r][i]));
-    //}
-    // print simulation details
-    print_parameters(&param, time1, time2, acc_site, acc_link, acc_link_big,quench_acc);
+
+    print_parameters(&param, time1, time2, acc_site, acc_link, acc_link_big,0);
 
     // free configuration
     free_conf(&GC, &param);
@@ -180,15 +355,10 @@ void print_template_input(void)
     fprintf(fp, "thermal   0\n");
     fprintf(fp, "overrelax 5\n");
     fprintf(fp, "measevery 1\n");
-	#ifdef GAUGE_FIX
-      fprintf(fp,"\n");
-      fprintf(fp, "quench_gamma 2.0\n");
-      fprintf(fp, "quench_epsilon_metro 0.8\n");
-      fprintf(fp, "quench_sample 5\n");
-      fprintf(fp, "quench_thermal   0\n");
-      fprintf(fp, "quench_measevery 1\n");
-      fprintf(fp, "quench_overrelax 0\n");
-    #endif
+
+    fprintf(fp, "smearing_steps 2\n");
+    fprintf(fp, "alpha_smearing 0.9\n");
+
     fprintf(fp,"\n");
     fprintf(fp, "epsilon_metro_site 0.8\n");
     fprintf(fp, "epsilon_metro_link 0.8\n");
@@ -230,10 +400,10 @@ int main (int argc, char **argv)
       #endif
 
       #ifdef BIG_LINK
-	printf("\n\t BIG LINK \n");
+   printf("\n\t BIG LINK \n");
       #endif
 
-      #ifdef CSTAR_BC 
+      #ifdef CSTAR_BC
         printf("\n\tC^* BOUNDARY CONDITIONS\n");
       #else
         printf("\n\tPERIODIC BOUNDARY CONDITIONS\n");
@@ -247,13 +417,13 @@ int main (int argc, char **argv)
          printf("\n\tTEMPORAL GAUGE\n");
       #endif
 
-	  #ifdef GAUGE_FIX
+     #ifdef GAUGE_FIX
         printf("\n\tGAUGE_FIX mode (stocastic gauge fixing)\n");
       #endif
 
-		#ifdef DEBUG_GAUGE_FIX
-		  printf("\n\tDEBUG_GAUGE_FIX mode (stocastic gauge fixing)\n");
-		#endif
+      #ifdef DEBUG_GAUGE_FIX
+        printf("\n\tDEBUG_GAUGE_FIX mode (stocastic gauge fixing)\n");
+      #endif
 
 
       printf("\n");

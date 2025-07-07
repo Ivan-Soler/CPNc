@@ -38,6 +38,10 @@ typedef struct GParam {
   int d_quench_measevery;
   int d_quench_overrelax;
 
+  //for smearing and blocking
+  int smearing_steps;
+  double alpha;
+
   // output file names
   char d_conf_file[STD_STRING_LENGTH];
   char d_data_file[STD_STRING_LENGTH];
