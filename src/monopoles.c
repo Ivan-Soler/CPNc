@@ -79,12 +79,13 @@ void measure_polyakov_corr(Conf const * const GC,
                            FILE *datafilep)
       {
    int t1, t2, t;
-   double corr_poly;
+   double corr_poly,plaq;
    complex poly[param->d_size[0]];
 
 
    polyakov_time_sliced(GC,geo,param,poly);
-
+   plaq=plaquette(GC,geo,param);
+   fprintf(datafilep, "%.12f ", 1-plaq);
    for(t = 0; t<param->d_size[0]/2; t++)
         {
         corr_poly = 0.0;
@@ -97,6 +98,7 @@ void measure_polyakov_corr(Conf const * const GC,
 
         fprintf(datafilep, " %.12f", corr_poly);
         }
+
    fprintf(datafilep, "\n");
    fflush(datafilep);
    }
@@ -301,7 +303,7 @@ void spatialblocking_singlesite(Conf const * const GC,
 // create spatially blocked configurations (i.e. L_spatial->L_spatial/2)
 void init_spatial_blocked_conf(Conf *blockGC,
                                Conf const * const GC,
-                               GParam const * const blockparam,
+                               GParam * blockparam,
                                Geometry const * const geo,
                                GParam const * const param)
   {
@@ -310,6 +312,19 @@ void init_spatial_blocked_conf(Conf *blockGC,
   int blockcart[STDIM], cart[STDIM];
   int i, mu, err;
   complex U;
+
+  long blockvol;
+
+  blockvol=param->d_size[0];
+  for(i=1; i<STDIM;i++)
+         {
+         blockparam->d_size[i]=param->d_size[i]/2;
+         blockvol*=blockparam->d_size[i];
+         //fprintf(stdout,"Direction %d, blocked size %d\n",i,blockparam.d_size[i]);
+         }
+      blockparam->d_volume=blockvol;
+      blockparam->d_inv_vol=1.0/((double) blockparam->d_volume);
+      //fprintf(stdout, "volume %ld, inverse volume %.4f \n",blockparam.d_volume,blockparam.d_inv_vol);
 
   for(i=1; i<STDIM; i++)
      {
@@ -340,7 +355,6 @@ void init_spatial_blocked_conf(Conf *blockGC,
   // initialize GC
   for(rb=0; rb<(blockparam->d_volume); rb++)
      {
-     fprintf(stdout,"Blocked rb: %ld\n",rb);
      si_to_cart(blockcart, rb, blockparam);
      cart[0]=blockcart[0];
      for(i=1; i<STDIM; i++)
@@ -400,25 +414,8 @@ void real_main(char *in_file)
 
     // montecarlo
     time(&time1);
-    measure_polyakov_corr(&GC,&geo,&param,datafilep);
-    int i;
-    long blockvol;
-    blockvol=param.d_size[0];
-    for(i=1; i<STDIM;i++)
-       {
-       blockparam.d_size[i]=param.d_size[i]/2;
-       blockvol*=blockparam.d_size[i];
-       fprintf(stdout,"Direction %d, blocked size %d\n",i,blockparam.d_size[i]);
-       }
-    blockparam.d_volume=blockvol;
-    blockparam.d_inv_vol=1.0/((double) blockparam.d_volume);
-    fprintf(stdout, "volume %ld, inverse volume %.4f \n",blockparam.d_volume,blockparam.d_inv_vol);
 
-    init_geometry(&blockgeo, &blockparam);
-    init_spatial_blocked_conf(&blockGC,&GC,&blockparam,&geo,&param);
-    spatial_smearing(&blockGC,&blockgeo,&blockparam);
-    measure_polyakov_corr(&blockGC,&blockgeo,&blockparam,datafilep);
-    exit(EXIT_FAILURE);
+
     // count starts from 1 to avoid problems using %
     for(count=1; count < param.d_sample + 1; count++)
        {
@@ -462,7 +459,15 @@ void real_main(char *in_file)
 
        if(count % param.d_measevery ==0 && count > param.d_thermal)
          {
-          measure_polyakov_corr(&GC,&geo,&param,datafilep);
+          init_spatial_blocked_conf(&blockGC,&GC,&blockparam,&geo,&param);
+          init_geometry(&blockgeo, &blockparam);
+
+          spatial_smearing(&blockGC,&blockgeo,&blockparam);
+
+          measure_polyakov_corr(&blockGC,&blockgeo,&blockparam,datafilep);
+
+          free_conf_gauge(&blockGC,&blockparam);
+          free_geometry(&blockgeo, &blockparam);
          }
 
        // save configuration for backup

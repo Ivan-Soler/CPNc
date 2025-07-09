@@ -84,6 +84,38 @@ double plaquette(Conf const * const GC,
    return ris;
    }
 
+double plaquette_spatial(Conf const * const GC,
+                 Geometry const * const geo,
+                 GParam const * const param)
+   {
+   long r;
+   double ris=0.0;
+
+   for(r=0; r<(param->d_volume); r++)
+      {
+      double tmp;
+      int i, j;
+
+      i=0;
+      tmp=0.0;
+
+      for(i=1; i<STDIM; i++)
+         {
+         for(j=i+1; j<STDIM; j++)
+            {
+            tmp+=plaquette_single(GC, geo, r, i, j);
+            }
+         }
+
+      ris+=tmp;
+      }
+
+   ris*=param->d_inv_vol;
+
+   return ris;
+   }
+
+
 
 // compute the average value of Re[ phi_x^{dag} lambda_{x,mu} phi_{x+mu} ]
 double higgs_interaction(Conf const * const GC,

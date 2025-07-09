@@ -5,7 +5,7 @@
 
 #define CHARGE 1
 
-#define DEBUG  // activate some debug tests
+//#define DEBUG  // activate some debug tests
 
 //#define CSTAR_BC   //C* bounday conditions
 

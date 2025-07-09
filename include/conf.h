@@ -63,6 +63,8 @@ void read_conf(Conf *GC,
                GParam const * const param);
 void free_conf(Conf *GC,
                GParam const * const param);
+void free_conf_gauge(Conf *GC,
+               GParam const * const param);
 void equal_conf(Conf const * const GC, Conf *GC2,
 					GParam const * const param);
 void equal_gauge_conf(Conf const * const GC, Conf *GC2,
