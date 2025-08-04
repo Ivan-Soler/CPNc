@@ -596,9 +596,7 @@ void real_main(char *in_file)
     free_conf(&GC, &param);
 
     // free geometry
-    //fprintf(stdout," %ld \n",nnp(&geo, 0, 0));
     free_geometry(&geo, &param);
-    //fprintf(stdout," %ld \n",nnp(&geo, 0, 0));
 
     //free polyakov loops;
     for(n=0; n<param.numblock+2; n++)

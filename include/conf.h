@@ -67,7 +67,11 @@ void free_conf_gauge(Conf *GC,
                GParam const * const param);
 void equal_conf(Conf const * const GC, Conf *GC2,
 					GParam const * const param);
-void equal_gauge_conf(Conf const * const GC, Conf *GC2,
+void equal_gauge_conf(Conf *GC2,
+               GParam const * const param,
+               Conf const * const GC);
+void copy_gauge_conf(Conf *GC2,
+               Conf const * const GC,
                GParam const * const param);
 void write_conf_on_file_with_name(Conf const * const GC,
                                   GParam const * const param,
