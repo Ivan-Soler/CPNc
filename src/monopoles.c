@@ -407,7 +407,7 @@ void block_measure_polyakov_loop(Conf const * const GC,
       //Create the first blocked lattice
       init_spatial_blocked_conf(&blockGC,&blockparam,&SmearedGC, geo,param);
       init_geometry(&blockgeo, &blockparam);
-      free_conf(&SmearedGC,param);
+      free_conf_gauge(&SmearedGC,param);
 
       //fprintf(stdout,"Initialized 0 \n");
 
@@ -417,7 +417,7 @@ void block_measure_polyakov_loop(Conf const * const GC,
       init_geometry(&blockgeo2, &blockparam2);
    }
    else{
-      free_conf(&SmearedGC,param);
+      free_conf_gauge(&SmearedGC,param);
    }
 
 
@@ -431,18 +431,23 @@ void block_measure_polyakov_loop(Conf const * const GC,
 
       if(n<param->numblock)
          {
-         //Create next blocked lattice
-         init_spatial_blocked_conf(&blockGC2,&blockparam2,&blockGC,&blockgeo,&blockparam);
-         init_geometry(&blockgeo2, &blockparam2);
-
-         //Remove the last one
+         //Free the blocked lattice
          free_conf_gauge(&blockGC,&blockparam);
          free_geometry(&blockgeo, &blockparam);
 
-         //Create the copy
-         blockparam=blockparam2;
-         copy_gauge_conf(&blockGC,&blockGC2,&blockparam2);
+         //Create next blocked lattice from the copy
+         init_spatial_blocked_conf(&blockGC,&blockparam,&blockGC2,&blockgeo2,&blockparam2);
          init_geometry(&blockgeo, &blockparam);
+
+         //Free the last copy
+         free_conf_gauge(&blockGC2,&blockparam2);
+         free_geometry(&blockgeo2, &blockparam2);
+
+         //Create the new copy
+         blockparam2=blockparam;
+         copy_gauge_conf(&blockGC2,&blockGC,&blockparam);
+         init_geometry(&blockgeo2, &blockparam2);
+
          }
       }
       //fprintf(stdout,"Delete \n");
