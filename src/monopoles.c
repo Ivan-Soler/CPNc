@@ -13,7 +13,7 @@
 #include"../include/gparam.h"
 #include"../include/random.h"
 
-complex space_polyakov(Conf const * const GC,
+double complex space_polyakov(Conf const * const GC,
                     Geometry const * const geo,
                     GParam const * const param,
                     long r,
@@ -31,7 +31,7 @@ complex space_polyakov(Conf const * const GC,
    return poly;
    }
 
-complex polyakov_averaged(Conf const * const GC,
+double complex polyakov_averaged(Conf const * const GC,
                        Geometry const * const geo,
                        GParam const * const param,
                        int dir,
@@ -47,7 +47,7 @@ complex polyakov_averaged(Conf const * const GC,
 
    for(i=0; i<param->d_size[dir2]; i++)
       {
-      poly_av+=space_polyakov(GC,geo,param,r,dir);
+      poly_av+=space_polyakov(GC,geo,param,r2,dir);
       r2=nnp(geo,r2,dir2);
       }
    poly_av/=param->d_size[dir2];
@@ -58,7 +58,7 @@ complex polyakov_averaged(Conf const * const GC,
 void polyakov_time_sliced(Conf const * const GC,
                           Geometry const * const geo,
                           GParam const * const param,
-                          complex * poly)
+                          double complex * poly)
    {
    long r;
    int t;
@@ -67,36 +67,36 @@ void polyakov_time_sliced(Conf const * const GC,
    for(t=0; t<param->d_size[0]; t++)
       {
          poly[t]= polyakov_averaged(GC,geo,param,1,r);
-         poly[t]+= polyakov_averaged(GC,geo,param,2,r);
-         poly[t]/=2;
+         //poly[t]+= polyakov_averaged(GC,geo,param,2,r);
+         //poly[t]/=2.0;
          r=nnp(geo,r,0);
       }
    }
 
-void measure_polyakov_corr(Conf const * const GC,
-                           Geometry const * const geo,
-                           GParam const * const param,
-                           FILE *datafilep)
+void measure_polyakov_corr(GParam const * const param,
+                           double complex ** poly,
+                           FILE * datafilep)
       {
-   int t1, t2, t;
-   double corr_poly,plaq;
-   complex poly[param->d_size[0]];
+   int t1, t2, t ;
+   int i,j;
+   double corr_repoly, corr_impoly;
 
-
-   polyakov_time_sliced(GC,geo,param,poly);
-   plaq=plaquette(GC,geo,param);
-   fprintf(datafilep, "%.12f ", 1-plaq);
    for(t = 0; t<param->d_size[0]/2; t++)
+      for(i=0; i<param->numblock+2; i++)
+         for(j=0; j<=i; j++)
         {
-        corr_poly = 0.0;
+        corr_repoly = 0.0;
+        corr_impoly = 0.0;
         for(t1 = 0; t1<param->d_size[0]; t1++)
            {
            t2=(t1+t) % param->d_size[0];
-           corr_poly += creal(conj(poly[t2])*poly[t1]);
+           corr_repoly += creal(poly[i][t2])*creal(poly[j][t1]);
+           corr_impoly += cimag(poly[i][t2])*cimag(poly[j][t1]);
            }
-        corr_poly/=(double) param->d_size[0];
+        corr_repoly/=(double) param->d_size[0];
+        corr_impoly/=(double) param->d_size[0];
 
-        fprintf(datafilep, " %.12f", corr_poly);
+        fprintf(datafilep, "%.12f %.12f ", corr_repoly, corr_impoly);
         }
 
    fprintf(datafilep, "\n");
@@ -107,11 +107,11 @@ void staples_wilson_no_time(Conf const * const GC,
                                 Geometry const * const geo,
                                 long r,
                                 int i,
-                                complex * U)
+                                double complex * U)
   {
   int j, l;
   long k;
-  complex link1, link2, link3, link12, stap;
+  double complex link1, link2, link3, link12, stap;
 
   for(l=i+1; l< i + STDIM; l++)
      {
@@ -177,13 +177,14 @@ void spatial_smearing(Conf const * const GC,
   {
   int i, step;
   long r;
-  complex U;
+  double complex U;
   Conf staple_GC;
   U=0;
 
-  init_conf(&staple_GC,param);
-  equal_gauge_conf(GC,&staple_GC,param);
+  //init_conf(&staple_GC,param);
+  copy_gauge_conf(&staple_GC,GC,param);
 
+  //fprintf(stdout,"Staple initialized \n");
   for(step=0; step<param->smearing_steps; step++)
      {
      for(r = 0; r < param->d_volume; r++)
@@ -206,8 +207,9 @@ void spatial_smearing(Conf const * const GC,
         }
      }
 
-  free_conf(&staple_GC, param);
+  free_conf_gauge(&staple_GC, param);
   }
+
 
 // compute blocked link for a given site
 void spatialblocking_singlesite(Conf const * const GC,
@@ -215,12 +217,12 @@ void spatialblocking_singlesite(Conf const * const GC,
                                 GParam const * const param,
                                 long r,
                                 int i,
-                                complex * U)
+                                double complex * U)
   {
   int j;
   long k, k1;
 
-  complex link1, link2, link3, link4, stap;
+  double complex link1, link2, link3, link4, stap;
 
   #ifdef DEBUG
   if(r >= param->d_volume)
@@ -281,8 +283,8 @@ void spatialblocking_singlesite(Conf const * const GC,
 //        k     (4)    r
 //
 
-   k=nnm(geo, r, j);
-   k1=nnp(geo, k, i);
+   k=nnm(geo,r,j);
+   k1=nnp(geo,k,i);
 
    link1= GC->lambda[nnp(geo, k1, i)][j];  // link1 = (1)
    link2= GC->lambda[k1][i];               // link2 = (2)
@@ -291,9 +293,10 @@ void spatialblocking_singlesite(Conf const * const GC,
 
    stap+=conj(link1)*conj(link2)*conj(link3)*link4;
 
-   *U=GC->lambda[r][i]*GC->lambda[nnp(geo, r, i)][i];
-   stap*=param->blockcoeff;
-   *U+=stap;
+   *U=(1-param->blockcoeff)*GC->lambda[r][i]*GC->lambda[nnp(geo, r, i)][i];
+
+   stap*=param->blockcoeff/6;
+   *U+=conj(stap);
 
 
    *U/=sqrt((double) (*U*conj(*U)));
@@ -302,8 +305,8 @@ void spatialblocking_singlesite(Conf const * const GC,
 
 // create spatially blocked configurations (i.e. L_spatial->L_spatial/2)
 void init_spatial_blocked_conf(Conf *blockGC,
-                               Conf const * const GC,
                                GParam * blockparam,
+                               Conf const * const GC,
                                Geometry const * const geo,
                                GParam const * const param)
   {
@@ -311,21 +314,12 @@ void init_spatial_blocked_conf(Conf *blockGC,
   long rb, r;
   int blockcart[STDIM], cart[STDIM];
   int i, mu, err;
-  complex U;
+  double complex U;
+
 
   long blockvol;
 
-  blockvol=param->d_size[0];
-  for(i=1; i<STDIM;i++)
-         {
-         blockparam->d_size[i]=param->d_size[i]/2;
-         blockvol*=blockparam->d_size[i];
-         //fprintf(stdout,"Direction %d, blocked size %d\n",i,blockparam.d_size[i]);
-         }
-      blockparam->d_volume=blockvol;
-      blockparam->d_inv_vol=1.0/((double) blockparam->d_volume);
-      //fprintf(stdout, "volume %ld, inverse volume %.4f \n",blockparam.d_volume,blockparam.d_inv_vol);
-
+  *blockparam=*param;
   for(i=1; i<STDIM; i++)
      {
      if(param->d_size[i] % 2 != 0)
@@ -335,8 +329,18 @@ void init_spatial_blocked_conf(Conf *blockGC,
        }
      }
 
+  blockvol=param->d_size[0];
+  for(i=1; i<STDIM;i++)
+         {
+         blockparam->d_size[i]=param->d_size[i]/2;
+         blockvol*=blockparam->d_size[i];
+         }
+      blockparam->d_volume=blockvol;
+      blockparam->d_inv_vol=1.0/((double) blockparam->d_volume);
+
+
   // allocate the lattice
-  err=posix_memalign((void**)&(blockGC->lambda), (size_t) DOUBLE_ALIGN, (size_t) blockparam->d_volume * sizeof(complex *));
+  err=posix_memalign((void**)&(blockGC->lambda), (size_t) DOUBLE_ALIGN, (size_t) blockparam->d_volume * sizeof(double complex *));
   if(err!=0)
     {
     fprintf(stderr, "Problems in allocating the lattice! (%s, %d)\n", __FILE__, __LINE__);
@@ -344,7 +348,7 @@ void init_spatial_blocked_conf(Conf *blockGC,
     }
   for(r=0; r<(blockparam->d_volume); r++)
      {
-     err=posix_memalign((void**)&(blockGC->lambda[r]), (size_t) DOUBLE_ALIGN, (size_t) STDIM * sizeof(complex));
+     err=posix_memalign((void**)&(blockGC->lambda[r]), (size_t) DOUBLE_ALIGN, (size_t) STDIM * sizeof(double complex));
      if(err!=0)
        {
        fprintf(stderr, "Problems in allocating the lattice! (%s, %d)\n", __FILE__, __LINE__);
@@ -352,7 +356,9 @@ void init_spatial_blocked_conf(Conf *blockGC,
        }
      }
 
+
   // initialize GC
+
   for(rb=0; rb<(blockparam->d_volume); rb++)
      {
      si_to_cart(blockcart, rb, blockparam);
@@ -364,7 +370,6 @@ void init_spatial_blocked_conf(Conf *blockGC,
      r=cart_to_si(cart, param);
 
      blockGC->lambda[rb][0]=GC->lambda[r][0];
-
      for(mu=1; mu<STDIM; mu++)
         {
         // this is the real point where the blocking is performed
@@ -376,14 +381,85 @@ void init_spatial_blocked_conf(Conf *blockGC,
   blockGC->update_index=GC->update_index;
   }
 
+
+void block_measure_polyakov_loop(Conf const * const GC,
+                                 Geometry const *const geo,
+                                 GParam const * const param,
+                                 double complex ** polyakov_loop)
+   {
+   Conf blockGC;
+   Conf blockGC2;
+   Conf SmearedGC;
+   Geometry blockgeo;
+   Geometry blockgeo2;
+   GParam blockparam;
+   GParam blockparam2;
+
+   //Polyakov correlator bare
+   polyakov_time_sliced(GC,geo,param,polyakov_loop[0]);
+
+   //Polyakov correlator with one smearing
+   copy_gauge_conf(&SmearedGC,GC,param);
+   spatial_smearing(&SmearedGC,geo,param);
+   polyakov_time_sliced(&SmearedGC,geo,param,polyakov_loop[1]);
+
+   if (param->numblock >0 ){
+      //Create the first blocked lattice
+      init_spatial_blocked_conf(&blockGC,&blockparam,&SmearedGC, geo,param);
+      init_geometry(&blockgeo, &blockparam);
+      free_conf(&SmearedGC,param);
+
+      //fprintf(stdout,"Initialized 0 \n");
+
+      //Create a copy. A copy is necessary when blocking again
+      blockparam2=blockparam;
+      copy_gauge_conf(&blockGC2,&blockGC,&blockparam);
+      init_geometry(&blockgeo2, &blockparam2);
+   }
+   else{
+      free_conf(&SmearedGC,param);
+   }
+
+
+   //fprintf(stdout,"Numblock %d \n",param->numblock);
+   int n;
+   for(n=2; n<param->numblock+2; n++)
+      {
+
+      polyakov_time_sliced(&blockGC,&blockgeo,&blockparam,polyakov_loop[n]);
+
+
+      if(n<param->numblock)
+         {
+         //Create next blocked lattice
+         init_spatial_blocked_conf(&blockGC2,&blockparam2,&blockGC,&blockgeo,&blockparam);
+         init_geometry(&blockgeo2, &blockparam2);
+
+         //Remove the last one
+         free_conf_gauge(&blockGC,&blockparam);
+         free_geometry(&blockgeo, &blockparam);
+
+         //Create the copy
+         blockparam=blockparam2;
+         copy_gauge_conf(&blockGC,&blockGC2,&blockparam2);
+         init_geometry(&blockgeo, &blockparam);
+         }
+      }
+      //fprintf(stdout,"Delete \n");
+      //Delete the blocked lattice
+      free_conf_gauge(&blockGC2, &blockparam2);
+      free_geometry(&blockgeo2, &blockparam2);
+
+      //Delete the copy
+       free_conf_gauge(&blockGC, &blockparam);
+       free_geometry(&blockgeo, &blockparam);
+   }
+
 void real_main(char *in_file)
     {
     Conf GC;
-    Conf blockGC;
     Geometry geo;
-    Geometry blockgeo;
     GParam param;
-    GParam blockparam;
 
     long count;
     FILE *datafilep;
@@ -393,7 +469,6 @@ void real_main(char *in_file)
     double acc_link_local, acc_site_local, acc_link_big_local;
     // read input file
     readinput(in_file, &param);
-    readinput(in_file, &blockparam);
 
     // initialize random generator
     initrand(param.d_randseed);
@@ -415,7 +490,24 @@ void real_main(char *in_file)
     // montecarlo
     time(&time1);
 
-
+    double complex **polyakov_loop;
+    int err;
+    err=posix_memalign((void**) &(polyakov_loop),(size_t) DOUBLE_ALIGN, (size_t) (param.numblock+2) * sizeof(double complex *));
+    if(err!=0)
+       {
+       fprintf(stderr, "Problems in allocating the polyakov correlators! (%s, %d)\n", __FILE__, __LINE__);
+       exit(EXIT_FAILURE);
+       }
+    int n;
+    for(n=0; n<param.numblock+2;n++)
+       {
+       err=posix_memalign((void**) &(polyakov_loop[n]), (size_t) DOUBLE_ALIGN, (size_t) param.d_size[0] * sizeof(double complex));
+       if(err!=0)
+          {
+          fprintf(stderr, "Problems in allocating the polyakov correlators! (%s, %d)\n", __FILE__, __LINE__);
+          exit(EXIT_FAILURE);
+          }
+       }
     // count starts from 1 to avoid problems using %
     for(count=1; count < param.d_sample + 1; count++)
        {
@@ -459,15 +551,12 @@ void real_main(char *in_file)
 
        if(count % param.d_measevery ==0 && count > param.d_thermal)
          {
-          init_spatial_blocked_conf(&blockGC,&GC,&blockparam,&geo,&param);
-          init_geometry(&blockgeo, &blockparam);
+          double plaq;
+          plaq=plaquette(&GC,&geo,& param);
+          fprintf(datafilep, "%.12f ", plaq);
 
-          spatial_smearing(&blockGC,&blockgeo,&blockparam);
-
-          measure_polyakov_corr(&blockGC,&blockgeo,&blockparam,datafilep);
-
-          free_conf_gauge(&blockGC,&blockparam);
-          free_geometry(&blockgeo, &blockparam);
+          block_measure_polyakov_loop(&GC,&geo,&param,polyakov_loop);
+          measure_polyakov_corr(&param,polyakov_loop,datafilep);
          }
 
        // save configuration for backup
@@ -502,12 +591,21 @@ void real_main(char *in_file)
 
     print_parameters(&param, time1, time2, acc_site, acc_link, acc_link_big,0);
 
+
     // free configuration
     free_conf(&GC, &param);
 
     // free geometry
+    //fprintf(stdout," %ld \n",nnp(&geo, 0, 0));
     free_geometry(&geo, &param);
+    //fprintf(stdout," %ld \n",nnp(&geo, 0, 0));
 
+    //free polyakov loops;
+    for(n=0; n<param.numblock+2; n++)
+       {
+       free(polyakov_loop[n]);
+       }
+    free(polyakov_loop);
     }
 
 

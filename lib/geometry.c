@@ -21,6 +21,8 @@ void init_geometry(Geometry *geo, GParam const * const param)
   long r, rm, rp;
   int cartcoord[STDIM];
 
+  fprintf(stdout,"Initialize %ld \n",param->d_volume);
+
   // allocate memory
   err=posix_memalign((void**)&(geo->d_nnp), (size_t)INT_ALIGN, (size_t) param->d_volume * sizeof(long *));
   if(err!=0)
@@ -115,6 +117,7 @@ void init_geometry(Geometry *geo, GParam const * const param)
   #ifdef DEBUG
     test_geometry(geo, param);
   #endif
+
   }  
 
 
@@ -123,6 +126,7 @@ void free_geometry(Geometry *geo, GParam const * const param)
   {
   long r;
 
+  fprintf(stdout,"Free %ld \n",param->d_volume);
   for(r=0; r<param->d_volume; r++)
      {
      free(geo->d_nnp[r]);
@@ -130,10 +134,16 @@ void free_geometry(Geometry *geo, GParam const * const param)
      free(geo->d_bcsitep[r]);
      free(geo->d_bcsitem[r]);
      }
+
   free(geo->d_nnp);
   free(geo->d_nnm);
   free(geo->d_bcsitep);
   free(geo->d_bcsitem);
+  geo->d_nnp = NULL;
+  geo->d_nnm = NULL;
+  geo->d_bcsitep = NULL;
+  geo->d_bcsitem = NULL;
+
   }
 
 

@@ -175,6 +175,7 @@ void init_conf(Conf *GC,
      {
      GC->charge[r]=monpoles_cube(GC,&geo,r,param);
      }
+  free_geometry(&geo,param);
 
 
 
@@ -287,7 +288,7 @@ void read_conf(Conf *GC, GParam const * const param)
          }
        if(tmp_i != param->d_size[i])
          {
-         fprintf(stderr, "The size of the configuration lattice does not coincide with the one of the global parameter\n");
+         fprintf(stderr, "The size (%d) of the configuration lattice (%d) does not coincide with the one of the global parameter (%d)\n",i,tmp_i,param->d_size[i]);
          exit(EXIT_FAILURE);
          }
        }
@@ -364,6 +365,8 @@ void free_conf(Conf *GC, GParam const * const param)
 
   free(GC->Qh);
 
+  free(GC->charge);
+
   }
 
 void free_conf_gauge(Conf *GC, GParam const * const param)
@@ -378,6 +381,7 @@ void free_conf_gauge(Conf *GC, GParam const * const param)
   free(GC->lambda);
 
   }
+
 
 void equal_conf(Conf const * const GC, Conf *GC2,
 					GParam const * const param)
@@ -399,8 +403,9 @@ void equal_conf(Conf const * const GC, Conf *GC2,
 	}
 }
 
-void equal_gauge_conf(Conf const * const GC, Conf *GC2,
-               GParam const * const param)
+void equal_gauge_conf(Conf *GC2,
+                     GParam const * const param,
+                     Conf const * const GC)
 {
    long r;
    int i;
@@ -416,6 +421,33 @@ void equal_gauge_conf(Conf const * const GC, Conf *GC2,
    }
 }
 
+void copy_gauge_conf(Conf *GC2,
+               Conf const * const GC,
+               GParam const * const param)
+  {
+  long r;
+  int err;
+
+  // allocate the lattice
+  err=posix_memalign((void**) &(GC2->lambda), (size_t) DOUBLE_ALIGN, (size_t) param->d_volume * sizeof(double complex *));
+  if(err!=0)
+    {
+    fprintf(stderr, "Problems in allocating the lattice! (%s, %d)\n", __FILE__, __LINE__);
+    exit(EXIT_FAILURE);
+    }
+  for(r=0; r<(param->d_volume); r++)
+     {
+     err=posix_memalign((void**)&(GC2->lambda[r]), (size_t) DOUBLE_ALIGN, (size_t )STDIM * sizeof(double complex));
+     if(err!=0)
+       {
+       fprintf(stderr, "Problems in allocating the lattice! (%s, %d)\n", __FILE__, __LINE__);
+       exit(EXIT_FAILURE);
+       }
+     }
+
+  equal_gauge_conf(GC2,param,GC);
+
+  }
 
 // save a configuration in ILDG-like format
 void write_conf_on_file_with_name(Conf const * const GC,
