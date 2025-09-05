@@ -13,76 +13,115 @@
 #include"../include/gparam.h"
 #include"../include/random.h"
 
-double complex space_polyakov(Conf const * const GC,
+void space_polyakov(Conf const * const GC,
                     Geometry const * const geo,
                     GParam const * const param,
                     long r,
-                    int dir)
+                    double complex * polyakov_op_t)
    {
    int i;
    double complex poly;
-   poly=1.0+0.0*I;
+   double complex poly2_ev,poly2_odd,poly2tmpl,poly2tmpr;
+   poly=poly2_ev=poly2_odd=poly2tmpl=poly2tmpr=1.0+0.0*I;
+   long int r2;
+   r2=r;
 
-   for(i=0; i<param->d_size[dir];i++)
+   for(i=0; i<param->d_size[1];i++)
       {
-      poly*=GC->lambda[r][dir];
-      r=nnp(geo,r,dir);
+      poly*=GC->lambda[r][1];
+      r=nnp(geo,r,1);
       }
-   return poly;
+   for(i=0; i<param->d_size[1];i++)
+      {
+      poly2tmpl+=poly*plaquette_single(GC, geo, r2, 1, 2);
+      poly2tmpr+=poly*plaquette_single(GC, geo, nnm(geo,r2,2), 2, 1);
+      r2=nnp(geo,r2,1);
+      }
+   poly2_ev=poly2tmpl+poly2tmpr;
+   poly2_odd=poly2tmpl-poly2tmpr;
+
+   polyakov_op_t[0]=poly;
+   polyakov_op_t[1]=poly2_ev;
+   polyakov_op_t[2]=poly2_odd;
    }
 
-double complex polyakov_averaged(Conf const * const GC,
+void polyakov_averaged(Conf const * const GC,
                        Geometry const * const geo,
                        GParam const * const param,
-                       int dir,
+                       double complex * polyakov_op_t,
                        long r)
    {
-   int dir2,i;
+   int i;
    long r2;
-   double complex poly_av;
+
    r2=r;
-   poly_av=0;
 
-   dir2 = (dir==1) ? 2 : 1; //Check the dir perpendicular to time and the polyakov line
-
-   for(i=0; i<param->d_size[dir2]; i++)
+   //fprintf(stdout, "(%s, %d)\n",  __FILE__, __LINE__);
+   for(i=0; i<param->d_size[2]; i++)
       {
-      poly_av+=space_polyakov(GC,geo,param,r2,dir);
-      r2=nnp(geo,r2,dir2);
+      space_polyakov(GC,geo,param,r2,polyakov_op_t);
+      r2=nnp(geo,r2,2);
       }
-   poly_av/=param->d_size[dir2];
-   return poly_av;
+   polyakov_op_t[0]/=param->d_size[2];
+   polyakov_op_t[1]/=param->d_size[2];
+   polyakov_op_t[2]/=param->d_size[2];
 
    }
 
 void polyakov_time_sliced(Conf const * const GC,
                           Geometry const * const geo,
                           GParam const * const param,
-                          double complex * poly)
+                          double complex ** poly,
+                          int ind)
    {
    long r;
    int t;
 
+   double complex *polyakov_op;
+   int err;
+   int ops;
+   ops=3;// because we have a basis of three operators for the polyakov
+   err=posix_memalign((void**) &(polyakov_op),(size_t) DOUBLE_ALIGN, (size_t) ops * sizeof(double complex *));
+   if(err!=0)
+      {
+      fprintf(stderr, "Problems in allocating the polyakov correlators! (%s, %d)\n", __FILE__, __LINE__);
+      exit(EXIT_FAILURE);
+      }
+   /*for(t=0; t<param->d_size[0];t++)
+      {
+      err=posix_memalign((void**) &(polyakov_op[t]), (size_t) DOUBLE_ALIGN, (size_t) (ops) * sizeof(double complex));
+      if(err!=0)
+         {
+         fprintf(stderr, "Problems in allocating the polyakov correlators! (%s, %d)\n", __FILE__, __LINE__);
+         exit(EXIT_FAILURE);
+         }
+      }*/
+
+   //fprintf(stdout, "(%s, %d)\n",  __FILE__, __LINE__);
    r=0;
    for(t=0; t<param->d_size[0]; t++)
       {
-         poly[t]= polyakov_averaged(GC,geo,param,1,r);
-         //poly[t]+= polyakov_averaged(GC,geo,param,2,r);
-         //poly[t]/=2.0;
+         polyakov_averaged(GC,geo,param,polyakov_op,r);
+         poly[ind][t]=polyakov_op[0];
+         poly[ind+1][t]=polyakov_op[1];
+         poly[ind+2][t]=polyakov_op[2];
          r=nnp(geo,r,0);
       }
+
+   free(polyakov_op);
    }
 
 void measure_polyakov_corr(GParam const * const param,
                            double complex ** poly,
-                           FILE * datafilep)
+                           FILE * datafilep,
+                           int ops)
       {
    int t1, t2, t ;
    int i,j;
    double corr_repoly, corr_impoly;
-
+   //fprintf(stdout, "(%s, %d)\n",  __FILE__, __LINE__);
    for(t = 0; t<param->d_size[0]/2; t++)
-      for(i=0; i<param->numblock+2; i++)
+      for(i=0; i<ops; i++)
          for(j=0; j<=i; j++)
         {
         corr_repoly = 0.0;
@@ -90,8 +129,8 @@ void measure_polyakov_corr(GParam const * const param,
         for(t1 = 0; t1<param->d_size[0]; t1++)
            {
            t2=(t1+t) % param->d_size[0];
-           corr_repoly += creal(poly[i][t2])*creal(poly[j][t1]);
-           corr_impoly += cimag(poly[i][t2])*cimag(poly[j][t1]);
+           corr_repoly += creal(poly[i][t2]*poly[j][t1]);
+           corr_impoly += cimag(poly[i][t2]*poly[j][t1]);
            }
         corr_repoly/=(double) param->d_size[0];
         corr_impoly/=(double) param->d_size[0];
@@ -175,7 +214,7 @@ void spatial_smearing(Conf const * const GC,
                       Geometry const * const geo,
                       GParam const * const param)
   {
-  int i, step;
+  int i;// step;
   long r;
   double complex U;
   Conf staple_GC;
@@ -183,10 +222,11 @@ void spatial_smearing(Conf const * const GC,
 
   //init_conf(&staple_GC,param);
   copy_gauge_conf(&staple_GC,GC,param);
-
+  //fprintf(stdout, "(%s, %d)\n",  __FILE__, __LINE__);
   //fprintf(stdout,"Staple initialized \n");
-  for(step=0; step<param->smearing_steps; step++)
-     {
+  //for(step=0; step<1; step++)//step<param->smearing_steps; step++)
+  //   {
+     //fprintf(stdout, "(%s, %d)\n",  __FILE__, __LINE__);
      for(r = 0; r < param->d_volume; r++)
         {
         for(i = 1; i < STDIM; i++)
@@ -195,7 +235,7 @@ void spatial_smearing(Conf const * const GC,
            staple_GC.lambda[r][i]=U;
            }
         }
-
+     //fprintf(stdout, "(%s, %d)\n",  __FILE__, __LINE__);
      for(r = 0; r < param->d_volume; r++)
         {
         for(i = 1; i < STDIM; i++)
@@ -204,9 +244,10 @@ void spatial_smearing(Conf const * const GC,
            GC->lambda[r][i]+=conj(staple_GC.lambda[r][i]);
            GC->lambda[r][i]/=sqrt((double) (GC->lambda[r][i]*conj(GC->lambda[r][i]))); //Reunitarize
            }
-        }
+        //}
      }
 
+  //fprintf(stdout, "(%s, %d)\n",  __FILE__, __LINE__);
   free_conf_gauge(&staple_GC, param);
   }
 
@@ -382,7 +423,7 @@ void init_spatial_blocked_conf(Conf *blockGC,
   }
 
 
-void block_measure_polyakov_loop(Conf const * const GC,
+void block_measure_operators(Conf const * const GC,
                                  Geometry const *const geo,
                                  GParam const * const param,
                                  double complex ** polyakov_loop)
@@ -394,15 +435,28 @@ void block_measure_polyakov_loop(Conf const * const GC,
    Geometry blockgeo2;
    GParam blockparam;
    GParam blockparam2;
+   int ind_op;
 
    //Polyakov correlator bare
-   polyakov_time_sliced(GC,geo,param,polyakov_loop[0]);
+   ind_op=0;
+   polyakov_time_sliced(GC,geo,param,polyakov_loop,ind_op);
+   ind_op+=3;
 
-   //Polyakov correlator with one smearing
+   //Create smeared copy
    copy_gauge_conf(&SmearedGC,GC,param);
-   spatial_smearing(&SmearedGC,geo,param);
-   polyakov_time_sliced(&SmearedGC,geo,param,polyakov_loop[1]);
 
+   fprintf(stdout, "(%s, %d)\n",  __FILE__, __LINE__);
+   int n;
+   for (n=0; n<param->smearing_steps;n++)
+      {
+      //fprintf(stdout, "(%s, %d)\n",  __FILE__, __LINE__);
+      spatial_smearing(&SmearedGC,geo,param);
+      //fprintf(stdout, "(%s, %d)\n",  __FILE__, __LINE__);
+      polyakov_time_sliced(&SmearedGC,geo,param,polyakov_loop,ind_op);
+      ind_op+=3;
+      }
+
+   //fprintf(stdout, "(%s, %d)\n",  __FILE__, __LINE__);
    if (param->numblock >0 ){
       //Create the first blocked lattice
       init_spatial_blocked_conf(&blockGC,&blockparam,&SmearedGC, geo,param);
@@ -419,31 +473,35 @@ void block_measure_polyakov_loop(Conf const * const GC,
    else{
       free_conf_gauge(&SmearedGC,param);
    }
-
-
-   //fprintf(stdout,"Numblock %d \n",param->numblock);
-   int n;
-   for(n=2; n<param->numblock+2; n++)
+   fprintf(stdout, "(%s, %d)\n",  __FILE__, __LINE__);
+   int j;
+   int k;
+   for(j=0; j<param->numblock; j++)
       {
+      for (k=0; k<param->smearing_steps; k++)
+      {
+      polyakov_time_sliced(&blockGC2,&blockgeo2,&blockparam2,polyakov_loop,ind_op);
+      ind_op+=3;
+      spatial_smearing(&blockGC2,&blockgeo2,&blockparam2);
+      }
+      polyakov_time_sliced(&blockGC2,&blockgeo2,&blockparam2,polyakov_loop,ind_op);
+      ind_op+=3;
 
-      polyakov_time_sliced(&blockGC,&blockgeo,&blockparam,polyakov_loop[n]);
-
-
-      if(n<param->numblock)
+      if(j<param->numblock)
          {
-         //Free the blocked lattice
+         //Free the previous blocked lattice
          free_conf_gauge(&blockGC,&blockparam);
          free_geometry(&blockgeo, &blockparam);
 
-         //Create next blocked lattice from the copy
+         //Create next blocked lattice from the smeared lattice
          init_spatial_blocked_conf(&blockGC,&blockparam,&blockGC2,&blockgeo2,&blockparam2);
          init_geometry(&blockgeo, &blockparam);
 
-         //Free the last copy
+         //Free the last smeared lattice
          free_conf_gauge(&blockGC2,&blockparam2);
          free_geometry(&blockgeo2, &blockparam2);
 
-         //Create the new copy
+         //Create the copy which will be smeared
          blockparam2=blockparam;
          copy_gauge_conf(&blockGC2,&blockGC,&blockparam);
          init_geometry(&blockgeo2, &blockparam2);
@@ -497,14 +555,16 @@ void real_main(char *in_file)
 
     double complex **polyakov_loop;
     int err;
-    err=posix_memalign((void**) &(polyakov_loop),(size_t) DOUBLE_ALIGN, (size_t) (param.numblock+2) * sizeof(double complex *));
+    int ops;
+    ops=((param.numblock+1)*(param.smearing_steps+1))*3;// +1 because of the unsmeared *3 because we have a basis of three operators for the polyakov
+    err=posix_memalign((void**) &(polyakov_loop),(size_t) DOUBLE_ALIGN, (size_t) (ops) * sizeof(double complex *));
     if(err!=0)
        {
        fprintf(stderr, "Problems in allocating the polyakov correlators! (%s, %d)\n", __FILE__, __LINE__);
        exit(EXIT_FAILURE);
        }
     int n;
-    for(n=0; n<param.numblock+2;n++)
+    for(n=0; n<ops;n++)
        {
        err=posix_memalign((void**) &(polyakov_loop[n]), (size_t) DOUBLE_ALIGN, (size_t) param.d_size[0] * sizeof(double complex));
        if(err!=0)
@@ -513,6 +573,27 @@ void real_main(char *in_file)
           exit(EXIT_FAILURE);
           }
        }
+
+
+    /*double complex **glueball;
+    ops=(param.numblock*param.smearing_steps+1)*1;// *1 because we have a basis of one for the glueballs
+    err=posix_memalign((void**) &(glueball),(size_t) DOUBLE_ALIGN, (size_t) (ops) * sizeof(double complex *));
+    if(err!=0)
+       {
+       fprintf(stderr, "Problems in allocating the polyakov correlators! (%s, %d)\n", __FILE__, __LINE__);
+       exit(EXIT_FAILURE);
+       }
+
+    for(n=0; n<ops;n++)
+       {
+       err=posix_memalign((void**) &(glueball[n]), (size_t) DOUBLE_ALIGN, (size_t) param.d_size[0] * sizeof(double complex));
+       if(err!=0)
+          {
+          fprintf(stderr, "Problems in allocating the polyakov correlators! (%s, %d)\n", __FILE__, __LINE__);
+          exit(EXIT_FAILURE);
+          }
+       }
+    (void) glueball;*/
     // count starts from 1 to avoid problems using %
     for(count=1; count < param.d_sample + 1; count++)
        {
@@ -560,8 +641,9 @@ void real_main(char *in_file)
           plaq=plaquette(&GC,&geo,& param);
           fprintf(datafilep, "%.12f ", plaq);
 
-          block_measure_polyakov_loop(&GC,&geo,&param,polyakov_loop);
-          measure_polyakov_corr(&param,polyakov_loop,datafilep);
+          block_measure_operators(&GC,&geo,&param,polyakov_loop);
+          measure_polyakov_corr(&param,polyakov_loop,datafilep,ops);
+          //measure_glueball_corr(&param,glueball,datafilep);
          }
 
        // save configuration for backup
@@ -604,7 +686,7 @@ void real_main(char *in_file)
     free_geometry(&geo, &param);
 
     //free polyakov loops;
-    for(n=0; n<param.numblock+2; n++)
+    for(n=0; n<ops; n++)
        {
        free(polyakov_loop[n]);
        }
