@@ -155,6 +155,11 @@ double plaquette_single(Conf const * const GC,
                         long r,
                         int i,
                         int j);
+double complex plaquette_complex(Conf const * const GC,
+                        Geometry const * const geo,
+                        long r,
+                        int i,
+                        int j);
 double plaquette(Conf const * const GC,
                  Geometry const * const geo,
                  GParam const * const param);

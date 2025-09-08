@@ -51,6 +51,43 @@ double plaquette_single(Conf const * const GC,
    return creal(ris);
    }
 
+double complex plaquette_complex(Conf const * const GC,
+                        Geometry const * const geo,
+                        long r,
+                        int i,
+                        int j)
+   {
+
+//
+//       ^ i
+//       |  (3)
+//       +---<---+
+//       |       |
+//   (4) V       ^ (2)
+//       |       |
+//       +--->---+---> j
+//       r  (1)
+//
+
+   double complex ris;
+
+   #ifdef CSTAR_BC
+     ris = GC->lambda[r][j];  // (1)
+     if(bcsitep(geo, r, j)==1){ ris *= GC->lambda[nnp(geo, r, j)][i]; } // (2)
+     else { ris *= conj(GC->lambda[nnp(geo, r, j)][i]); }
+     if(bcsitep(geo, r, i)==1){ ris *= conj(GC->lambda[nnp(geo, r, i)][j]); } // (3)
+     else{ ris *= GC->lambda[nnp(geo, r, i)][j]; }
+     ris *= conj(GC->lambda[r][i]);
+   #else
+     ris = GC->lambda[r][j];  // (1)
+     ris *= GC->lambda[nnp(geo, r, j)][i]; // (2)
+     ris *= conj(GC->lambda[nnp(geo, r, i)][j]); // (3)
+     ris *= conj(GC->lambda[r][i]); //4
+   #endif
+
+   return ris;
+   }
+
 
 double plaquette(Conf const * const GC,
                  Geometry const * const geo,
