@@ -8,84 +8,90 @@
 #include<string.h>
 #include<stdlib.h>
 
-
-void decl_opbasis(OPbasis *opbasis,
+void decl_op(OPerator *operator,
+      int n_op,
       GParam const * const param)
-{
-   opbasis->levels=(param->smearing_steps+1)*(param->numblock+1);
-   opbasis->n_polev=2*opbasis->levels;
-   opbasis->n_polodd=opbasis->levels;
+   {
    int err;
-
-   err=posix_memalign((void**) &(opbasis->Poly_ev),(size_t) DOUBLE_ALIGN, (size_t) (opbasis->n_polev) * sizeof(double complex *));
+   err=posix_memalign((void**) operator,(size_t) DOUBLE_ALIGN, (size_t) (n_op) * sizeof(double complex *));
    if(err!=0)
       {
       fprintf(stderr, "Problems in allocating the polyakov correlators! (%s, %d)\n", __FILE__, __LINE__);
       exit(EXIT_FAILURE);
       }
    int n;
-   for(n=0; n<opbasis->n_polev;n++)
+   for(n=0; n<n_op;n++)
       {
-      err=posix_memalign((void**) &(opbasis->Poly_ev[n]), (size_t) DOUBLE_ALIGN, (size_t) param->d_size[0] * sizeof(double complex));
+      err=posix_memalign((void**) &((*operator)[n]), (size_t) DOUBLE_ALIGN, (size_t) param->d_size[0] * sizeof(double complex));
       if(err!=0)
          {
          fprintf(stderr, "Problems in allocating the polyakov correlators! (%s, %d)\n", __FILE__, __LINE__);
          exit(EXIT_FAILURE);
          }
       }
+   }
+
+void init_op(OPerator operator,
+      int n_op,
+      GParam const * const param)
+   {
+   int n,t;
+   for(n=0; n<n_op;n++)
+      for(t=0; t<param->d_size[0]; t++)
+        {
+         operator[n][t]=0;
+        }
+   }
 
 
-   err=posix_memalign((void**) &(opbasis->Poly_odd),(size_t) DOUBLE_ALIGN, (size_t) (opbasis->n_polodd) * sizeof(double complex *));
-   if(err!=0)
+void free_op(OPerator operator,
+         int n_op)
+   {
+   int n;
+
+   for(n=0; n<n_op; n++)
       {
-      fprintf(stderr, "Problems in allocating the polyakov correlators! (%s, %d)\n", __FILE__, __LINE__);
-      exit(EXIT_FAILURE);
+      free(operator[n]);
       }
-   for(n=0; n<opbasis->n_polodd;n++)
-      {
-      err=posix_memalign((void**) &(opbasis->Poly_odd[n]), (size_t) DOUBLE_ALIGN, (size_t) param->d_size[0] * sizeof(double complex));
-      if(err!=0)
-         {
-         fprintf(stderr, "Problems in allocating the polyakov correlators! (%s, %d)\n", __FILE__, __LINE__);
-         exit(EXIT_FAILURE);
-         }
-      }
+   free(operator);
+   }
 
+void decl_opbasis(OPbasis *opbasis,
+      GParam const * const param)
+{
+   opbasis->polev=2;
+   opbasis->polodd=1;
+   opbasis->glueev=1;
+   opbasis->glueodd=1;
+
+   opbasis->levels=(param->smearing_steps+1)*(param->numblock+1);
+   opbasis->n_polev=opbasis->polev*opbasis->levels;
+   opbasis->n_polodd=opbasis->polodd*opbasis->levels;
+   opbasis->n_glueev=opbasis->glueev*opbasis->levels;
+   opbasis->n_glueodd=opbasis->glueodd*opbasis->levels;
+
+   decl_op(&(opbasis->Poly_odd),opbasis->n_polodd,param);
+   decl_op(&opbasis->Poly_ev,opbasis->n_polev,param);
+   decl_op(&opbasis->Glue_ev,opbasis->n_glueev,param);
+   decl_op(&opbasis->Glue_odd,opbasis->n_glueodd,param);
 }
 
 void init_opbasis(OPbasis *opbasis,
       GParam const * const param)
    {
-
-   int n,t;
-   for(n=0; n<opbasis->n_polev;n++)
-      for(t=0; t<param->d_size[0]; t++)
-        {
-         opbasis->Poly_ev[n][t]=0;
-        }
-
-   for(n=0; n<opbasis->n_polodd;n++)
-      for(t=0; t<param->d_size[0]; t++)
-        {
-         opbasis->Poly_odd[n][t]=0;
-        }
+   init_op(opbasis->Poly_odd,opbasis->n_polodd,param);
+   init_op(opbasis->Poly_ev,opbasis->n_polev,param);
+   init_op(opbasis->Glue_ev,opbasis->n_glueev,param);
+   init_op(opbasis->Glue_odd,opbasis->n_glueodd,param);
    }
+
 
 void free_basis(OPbasis *opbasis)
    {
-   int n;
-
-   for(n=0; n<opbasis->n_polev; n++)
-      {
-      free(opbasis->Poly_ev[n]);
-      }
-   free(opbasis->Poly_ev);
-
-   for(n=0; n<opbasis->n_polodd; n++)
-      {
-      free(opbasis->Poly_odd[n]);
-      }
-   free(opbasis->Poly_odd);
+   free_op(opbasis->Poly_odd,opbasis->n_polodd);
+   free_op(opbasis->Poly_ev,opbasis->n_polev);
+   free_op(opbasis->Glue_ev,opbasis->n_glueev);
+   free_op(opbasis->Glue_odd,opbasis->n_glueodd);
    }
 
 //computes the polyakov line along direction 1 at a single point
@@ -124,8 +130,8 @@ void poly_plaq(Conf const * const GC,
    //then insert a plaquette in each site and project to zero momentum
    for(i=0; i<param->d_size[1];i++)
          {
-         polypup+=polyline*plaquette_single(GC, geo, r, 1, 2);
-         polypdown+=polyline*plaquette_single(GC, geo, nnm(geo,r,2), 2, 1);
+         polypup+=polyline*plaquette_complex(GC, geo, r, 1, 2);
+         polypdown+=polyline*plaquette_complex(GC, geo, nnm(geo,r,2), 2, 1);
          r=nnp(geo,r,1);
          }
    *polyev+=(polypup+polypdown)/(2*param->d_size[1]);
@@ -156,12 +162,45 @@ void poly_averaged(OPbasis *basis,
       polyline+=tmp_polyline;
       r2=nnp(geo,r2,2);
       }
-   basis->Poly_ev[2*level][t]=polyline; //2 because two operators, need to be included as a parameter
-   basis->Poly_ev[2*level+1][t]=polyev;
-   basis->Poly_odd[level][t]=polyodd;
+   basis->Poly_ev[basis->polev*level][t]=polyline/param->d_size[2];
+   basis->Poly_ev[basis->polev*level+1][t]=polyev/param->d_size[2];
+   basis->Poly_odd[basis->polodd*level][t]=polyodd/param->d_size[2];
    r=nnp(geo,r,0);
    r2=r;
    }
+   }
+
+void glueball_averaged(OPbasis *basis,
+         Conf const * const GC,
+         Geometry const * const geo,
+         GParam const * const param,
+         int level)
+   {
+   double complex tmp_plaq;
+   long r,r2,r3;
+   int i,j,t;
+   r=0;
+   r2=0;
+   r3=0;
+
+   for(t=0; t<param->d_size[0]; t++)
+      {
+      tmp_plaq=0;
+      r2=r;
+      for(i=0; i<param->d_size[1]; i++)
+         {
+         r3=r2;
+         for(j=0; j<param->d_size[2]; j++)
+         {
+            tmp_plaq+=plaquette_complex(GC, geo, r3, 1, 2);
+            r3=nnp(geo,r3,2);
+         }
+         r2=nnp(geo,r2,1);
+         }
+      basis->Glue_ev[basis->glueev*level][t]=(tmp_plaq+conj(tmp_plaq))/(param->d_size[1]*param->d_size[2]);
+      basis->Glue_odd[basis->glueodd*level][t]=(tmp_plaq-conj(tmp_plaq))/(param->d_size[1]*param->d_size[2]);
+      r=nnp(geo,r,0);
+      }
    }
 
 void measure_print_corr(double complex ** operators,
@@ -193,6 +232,8 @@ void measure_print_corr_all(OPbasis *opbasis,
    {
    measure_print_corr(opbasis->Poly_ev,param,datafilep,opbasis->n_polev);
    measure_print_corr(opbasis->Poly_odd,param,datafilep,opbasis->n_polodd);
+   measure_print_corr(opbasis->Glue_ev,param,datafilep,opbasis->n_glueev);
+   measure_print_corr(opbasis->Glue_odd,param,datafilep,opbasis->n_glueodd);
    fprintf(datafilep, "\n");
    fflush(datafilep);
    }

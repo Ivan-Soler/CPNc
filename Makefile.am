@@ -40,6 +40,9 @@ random = ./include/myrngparam.h \
 vec = ./include/vec.h \
       ./lib/vec.c 
 
+ops= ./include/opbasis.h \
+     ./lib/opbasis.c
+
 cpn_c_SOURCES=./src/cpn_c.c \
                $(conf) \
                $(dSFMT) \
@@ -60,9 +63,10 @@ monopoles_SOURCES=./src/monopoles.c \
                $(gparam) \
                ./include/macro.h \
                $(random) \
-               $(vec)
+               $(vec) \
+	       $(ops)
 
 
-AM_CFLAGS = -std=c99 -O2 -Wall -Wextra -Werror -pedantic -Wconversion
+AM_CFLAGS = -std=c99 -O0 -Wall -Wextra -Werror -pedantic -Wconversion -g -fsanitize=address
 
 CLEANFILES = dati.dat log.dat dati.log conf.dat* template_input.in 
