@@ -37,12 +37,12 @@ void space_polyakov(Conf const * const GC,
       poly2tmpr+=poly*plaquette_single(GC, geo, nnm(geo,r2,2), 2, 1);
       r2=nnp(geo,r2,1);
       }
-   poly2_ev=poly2tmpl+poly2tmpr;
-   poly2_odd=poly2tmpl-poly2tmpr;
+   poly2_ev=(poly2tmpl+poly2tmpr)/(2*param->d_size[1]);
+   poly2_odd=(poly2tmpl-poly2tmpr)/(2*param->d_size[1]);
 
-   polyakov_op_t[0]=poly;
-   polyakov_op_t[1]=poly2_ev;
-   polyakov_op_t[2]=poly2_odd;
+   polyakov_op_t[0]+=poly;
+   polyakov_op_t[1]+=poly2_ev;
+   polyakov_op_t[2]+=poly2_odd;
    }
 
 void polyakov_averaged(Conf const * const GC,
@@ -55,12 +55,13 @@ void polyakov_averaged(Conf const * const GC,
    long r2;
 
    r2=r;
-
-   //fprintf(stdout, "(%s, %d)\n",  __FILE__, __LINE__);
+   polyakov_op_t[0]=0;
+   polyakov_op_t[1]=0;
+   polyakov_op_t[2]=0;
    for(i=0; i<param->d_size[2]; i++)
       {
-      space_polyakov(GC,geo,param,r2,polyakov_op_t);
-      r2=nnp(geo,r2,2);
+	space_polyakov(GC,geo,param,r2,polyakov_op_t);
+        r2=nnp(geo,r2,2);
       }
    polyakov_op_t[0]/=param->d_size[2];
    polyakov_op_t[1]/=param->d_size[2];
@@ -81,27 +82,19 @@ void polyakov_time_sliced(Conf const * const GC,
    int err;
    int ops;
    ops=3;// because we have a basis of three operators for the polyakov
-   err=posix_memalign((void**) &(polyakov_op),(size_t) DOUBLE_ALIGN, (size_t) ops * sizeof(double complex *));
+   err=posix_memalign((void**) &(polyakov_op),(size_t) DOUBLE_ALIGN, (size_t) ops * sizeof(double complex ));
    if(err!=0)
       {
       fprintf(stderr, "Problems in allocating the polyakov correlators! (%s, %d)\n", __FILE__, __LINE__);
       exit(EXIT_FAILURE);
       }
-   /*for(t=0; t<param->d_size[0];t++)
-      {
-      err=posix_memalign((void**) &(polyakov_op[t]), (size_t) DOUBLE_ALIGN, (size_t) (ops) * sizeof(double complex));
-      if(err!=0)
-         {
-         fprintf(stderr, "Problems in allocating the polyakov correlators! (%s, %d)\n", __FILE__, __LINE__);
-         exit(EXIT_FAILURE);
-         }
-      }*/
 
    //fprintf(stdout, "(%s, %d)\n",  __FILE__, __LINE__);
    r=0;
+   polyakov_op[1]=0;
    for(t=0; t<param->d_size[0]; t++)
       {
-         polyakov_averaged(GC,geo,param,polyakov_op,r);
+	 polyakov_averaged(GC,geo,param,polyakov_op,r);
          poly[ind][t]=polyakov_op[0];
          poly[ind+1][t]=polyakov_op[1];
          poly[ind+2][t]=polyakov_op[2];
@@ -136,6 +129,7 @@ void measure_polyakov_corr(GParam const * const param,
         corr_impoly/=(double) param->d_size[0];
 
         fprintf(datafilep, "%.12f %.12f ", corr_repoly, corr_impoly);
+
         }
 
    fprintf(datafilep, "\n");
@@ -442,10 +436,11 @@ void block_measure_operators(Conf const * const GC,
    polyakov_time_sliced(GC,geo,param,polyakov_loop,ind_op);
    ind_op+=3;
 
+   polyakov_time_sliced(GC,geo,param,polyakov_loop,ind_op);
    //Create smeared copy
    copy_gauge_conf(&SmearedGC,GC,param);
 
-   fprintf(stdout, "(%s, %d)\n",  __FILE__, __LINE__);
+
    int n;
    for (n=0; n<param->smearing_steps;n++)
       {
@@ -461,8 +456,7 @@ void block_measure_operators(Conf const * const GC,
       //Create the first blocked lattice
       init_spatial_blocked_conf(&blockGC,&blockparam,&SmearedGC, geo,param);
       init_geometry(&blockgeo, &blockparam);
-      free_conf_gauge(&SmearedGC,param);
-
+      
       //fprintf(stdout,"Initialized 0 \n");
 
       //Create a copy. A copy is necessary when blocking again
@@ -470,10 +464,10 @@ void block_measure_operators(Conf const * const GC,
       copy_gauge_conf(&blockGC2,&blockGC,&blockparam);
       init_geometry(&blockgeo2, &blockparam2);
    }
-   else{
-      free_conf_gauge(&SmearedGC,param);
-   }
-   fprintf(stdout, "(%s, %d)\n",  __FILE__, __LINE__);
+     
+
+   free_conf_gauge(&SmearedGC,param);  
+   
    int j;
    int k;
    for(j=0; j<param->numblock; j++)
@@ -487,7 +481,7 @@ void block_measure_operators(Conf const * const GC,
       polyakov_time_sliced(&blockGC2,&blockgeo2,&blockparam2,polyakov_loop,ind_op);
       ind_op+=3;
 
-      if(j<param->numblock)
+      if(j<(param->numblock-1))
          {
          //Free the previous blocked lattice
          free_conf_gauge(&blockGC,&blockparam);
@@ -516,7 +510,8 @@ void block_measure_operators(Conf const * const GC,
       //Delete the copy
        free_conf_gauge(&blockGC, &blockparam);
        free_geometry(&blockgeo, &blockparam);
-   }
+}
+
 
 void real_main(char *in_file)
     {
