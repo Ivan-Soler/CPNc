@@ -23,7 +23,7 @@ typedef struct Conf {
   int *charge;
   } Conf;
 
-inline double complex chargepow(double complex x)
+static inline double complex chargepow(double complex x)
   {
   int i;
   double complex ris=1.0+0.0*I;
