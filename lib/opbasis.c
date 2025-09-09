@@ -147,7 +147,7 @@ void poly_averaged(OPbasis *basis,
    {
 
    double complex tmp_polyline,polyline,polyev,polyodd;
-   tmp_polyline=polyline=polyev=polyodd=0;
+
 
    int i,t;
    long r,r2;
@@ -155,6 +155,7 @@ void poly_averaged(OPbasis *basis,
    r2=0;
    for(t=0; t<param->d_size[0]; t++)
       {
+      tmp_polyline=polyline=polyev=polyodd=0;
    for(i=0; i<param->d_size[2]; i++)
       {
       tmp_polyline=poly_line(GC,geo,param,r2);
