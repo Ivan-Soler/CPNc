@@ -156,19 +156,20 @@ void poly_averaged(OPbasis *basis,
    for(t=0; t<param->d_size[0]; t++)
       {
       tmp_polyline=polyline=polyev=polyodd=0;
-   for(i=0; i<param->d_size[2]; i++)
-      {
-      tmp_polyline=poly_line(GC,geo,param,r2);
-      poly_plaq(GC,geo,param,r2,tmp_polyline,&polyev,&polyodd);
-      polyline+=tmp_polyline;
-      r2=nnp(geo,r2,2);
+      for(i=0; i<param->d_size[2]; i++)
+         {
+         tmp_polyline=poly_line(GC,geo,param,r2);
+         poly_plaq(GC,geo,param,r2,tmp_polyline,&polyev,&polyodd);
+         polyline+=tmp_polyline;
+         r2=nnp(geo,r2,2);
+         }
+      basis->Poly_ev[basis->polev*level][t]=polyline/param->d_size[2];
+      basis->Poly_ev[basis->polev*level+1][t]=polyev/param->d_size[2];
+      basis->Poly_odd[basis->polodd*level][t]=polyodd/param->d_size[2];
+      r=nnp(geo,r,0);
+      r2=r;
       }
-   basis->Poly_ev[basis->polev*level][t]=polyline/param->d_size[2];
-   basis->Poly_ev[basis->polev*level+1][t]=polyev/param->d_size[2];
-   basis->Poly_odd[basis->polodd*level][t]=polyodd/param->d_size[2];
-   r=nnp(geo,r,0);
-   r2=r;
-   }
+
    }
 
 void glueball_averaged(OPbasis *basis,
@@ -220,7 +221,7 @@ void measure_print_corr(double complex ** operators,
         for(t1 = 0; t1<param->d_size[0]; t1++)
            {
            t2=(t1+t) % param->d_size[0];
-           corr += operators[i][t2]*operators[j][t1];
+           corr += operators[i][t2]*conj(operators[j][t1]);
            }
         corr/=(double) param->d_size[0];
         fprintf(datafilep, "%.12f %.12f ", creal(corr), cimag(corr));
