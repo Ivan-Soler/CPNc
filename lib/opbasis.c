@@ -130,8 +130,8 @@ void poly_plaq(Conf const * const GC,
    //then insert a plaquette in each site and project to zero momentum
    for(i=0; i<param->d_size[1];i++)
          {
-         polypup+=polyline*plaquette_complex(GC, geo, r, 1, 2);
-         polypdown+=polyline*plaquette_complex(GC, geo, nnm(geo,r,2), 2, 1);
+         polypup+=polyline*conj(plaquette_complex(GC, geo, r, 1, 2));
+         polypdown+=polyline*plaquette_complex(GC, geo, nnm(geo,r,2), 1, 2);
          r=nnp(geo,r,1);
          }
    *polyev+=(polypup+polypdown)/(2*param->d_size[1]);
