@@ -324,10 +324,11 @@ void block_measure_operators(OPbasis *opbasis,
    for (n=0; n<param->smearing_steps;n++)
       {
       spatial_smearing(&SmearedGC,geo,param);
-      poly_averaged(opbasis, &SmearedGC,geo,param,level);
-      glueball_averaged(opbasis,&SmearedGC,geo,param,level);
-      level+=1;
       }
+
+   poly_averaged(opbasis, &SmearedGC,geo,param,level);
+   glueball_averaged(opbasis,&SmearedGC,geo,param,level);
+   level+=1;
 
    if (param->numblock >0 ){
       //Create the first blocked lattice
@@ -343,14 +344,16 @@ void block_measure_operators(OPbasis *opbasis,
      
 
    free_conf_gauge(&SmearedGC,param);  
+
    int j,k;
    for(j=0; j<param->numblock; j++)
-      {
-      for (k=0; k<param->smearing_steps; k++)
       {
       poly_averaged(opbasis, &blockGC2,&blockgeo2,&blockparam2,level);
       glueball_averaged(opbasis,&blockGC2,&blockgeo2,&blockparam2,level);
       level+=1;
+
+      for (k=0; k<param->smearing_steps; k++)
+      {
       spatial_smearing(&blockGC2,&blockgeo2,&blockparam2);
       }
 

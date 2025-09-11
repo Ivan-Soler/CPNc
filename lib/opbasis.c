@@ -64,7 +64,7 @@ void decl_opbasis(OPbasis *opbasis,
    opbasis->glueev=1;
    opbasis->glueodd=1;
 
-   opbasis->levels=(param->smearing_steps+1)*(param->numblock+1);
+   opbasis->levels=2*(param->numblock+1); //2 because I measure with and withour smearing
    opbasis->n_polev=opbasis->polev*opbasis->levels;
    opbasis->n_polodd=opbasis->polodd*opbasis->levels;
    opbasis->n_glueev=opbasis->glueev*opbasis->levels;
