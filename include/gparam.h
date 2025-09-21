@@ -62,7 +62,7 @@ void remove_white_line_and_comments(FILE *input);
 void readinput(char *in_file, GParam *param);
 void init_derived_constants(GParam *param);
 
-void init_data_file(FILE **dataf, GParam const * const param);
+void init_data_file(FILE **dataf, GParam const * const param, char * fsufix);
 
 void print_parameters(GParam const * const param,
                       time_t time_start,

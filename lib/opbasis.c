@@ -59,8 +59,8 @@ void free_op(OPerator operator,
 void decl_opbasis(OPbasis *opbasis,
       GParam const * const param)
 {
-   opbasis->polev=2;
-   opbasis->polodd=1;
+   opbasis->polev=3;
+   opbasis->polodd=2;
    opbasis->glueev=1;
    opbasis->glueodd=1;
 
@@ -138,6 +138,32 @@ void poly_plaq(Conf const * const GC,
    *polyodd+=(polypup-polypdown)/(2*param->d_size[1]);
    }
 
+//compute the polyakov line with a plaquette inserted in the plane (1,2)
+//and orientation (up, down) and summ over it's position to project to zero momentum
+//returns the even and odd operator
+void poly_two_plaq(Conf const * const GC,
+      Geometry const * const geo,
+      GParam const * const param,
+      long r,
+      double complex polyline,
+      double complex *polyev,
+      double complex *polyodd)
+   {
+   int i;
+   double complex polypup, polypdown;
+   polypup=polypdown=0;
+
+   //then insert a plaquette in each site and project to zero momentum
+   for(i=0; i<param->d_size[1];i++)
+         {
+         polypup+=polyline*conj(plaquette_complex(GC, geo, r, 2, 1));
+         polypdown+=polyline*plaquette_complex(GC, geo, nnm(geo,r,2), 2, 1);
+         r=nnp(geo,r,1);
+         }
+   *polyev+=(polypup+polypdown)/(2*param->d_size[1]);
+   *polyodd+=(polypup-polypdown)/(2*param->d_size[1]);
+   }
+
 
 void poly_averaged(OPbasis *basis,
       Conf const * const GC,
@@ -155,6 +181,7 @@ void poly_averaged(OPbasis *basis,
    r2=0;
    for(t=0; t<param->d_size[0]; t++)
       {
+      //Operators 3
       tmp_polyline=polyline=polyev=polyodd=0;
       for(i=0; i<param->d_size[2]; i++)
          {
@@ -166,6 +193,17 @@ void poly_averaged(OPbasis *basis,
       basis->Poly_ev[basis->polev*level][t]=polyline/param->d_size[2];
       basis->Poly_ev[basis->polev*level+1][t]=polyev/param->d_size[2];
       basis->Poly_odd[basis->polodd*level][t]=polyodd/param->d_size[2];
+
+      // Operators 4
+      tmp_polyline=polyline=polyev=polyodd=0;
+      for(i=0; i<param->d_size[2]; i++)
+         {
+         tmp_polyline=poly_line(GC,geo,param,r2);
+         poly_plaq(GC,geo,param,r2,tmp_polyline,&polyev,&polyodd);
+         polyline+=tmp_polyline;
+         r2=nnp(geo,r2,2);
+         }
+
       r=nnp(geo,r,0);
       r2=r;
       }
@@ -194,7 +232,7 @@ void glueball_averaged(OPbasis *basis,
          r3=r2;
          for(j=0; j<param->d_size[2]; j++)
          {
-            tmp_plaq+=plaquette_complex(GC, geo, r3, 1, 2);
+            tmp_plaq+=plaquette_complex(GC, geo, r3, 2, 1);
             r3=nnp(geo,r3,2);
          }
          r2=nnp(geo,r2,1);
@@ -224,20 +262,24 @@ void measure_print_corr(double complex ** operators,
            corr += operators[i][t2]*conj(operators[j][t1]);
            }
         corr/=(double) param->d_size[0];
-        fprintf(datafilep, "%.12f %.12f ", creal(corr), cimag(corr));
+        fwrite(&(double){creal(corr)},sizeof(double),1,datafilep);
+        fwrite(&(double){cimag(corr)},sizeof(double),1,datafilep);
         }
+   fprintf(datafilep, "\n");
+   fflush(datafilep);
    }
 
 void measure_print_corr_all(OPbasis *opbasis,
                            GParam const * const param,
-                           FILE * datafilep)
+                           FILE * datafilepev,
+                           FILE * datafilepodd,
+                           FILE * datafilegev,
+                           FILE * datafilegodd)
    {
-   measure_print_corr(opbasis->Poly_ev,param,datafilep,opbasis->n_polev);
-   measure_print_corr(opbasis->Poly_odd,param,datafilep,opbasis->n_polodd);
-   measure_print_corr(opbasis->Glue_ev,param,datafilep,opbasis->n_glueev);
-   measure_print_corr(opbasis->Glue_odd,param,datafilep,opbasis->n_glueodd);
-   fprintf(datafilep, "\n");
-   fflush(datafilep);
+   measure_print_corr(opbasis->Poly_ev,param,datafilepev,opbasis->n_polev);
+   measure_print_corr(opbasis->Poly_odd,param,datafilepodd,opbasis->n_polodd);
+   measure_print_corr(opbasis->Glue_ev,param,datafilegev,opbasis->n_glueev);
+   measure_print_corr(opbasis->Glue_odd,param,datafilegodd,opbasis->n_glueodd);
    }
 
 #endif

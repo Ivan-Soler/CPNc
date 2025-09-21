@@ -400,7 +400,11 @@ void real_main(char *in_file)
     GParam param;
 
     long count;
-    FILE *datafilep;
+    FILE *datafilepev;
+    FILE *datafilepodd;
+    FILE *datafilegev;
+    FILE *datafilegodd;
+    FILE *datafileplaq;
 
     time_t time1, time2;
     double acc_link, acc_site, acc_link_big;
@@ -412,7 +416,12 @@ void real_main(char *in_file)
     initrand(param.d_randseed);
 
     // open data_file
-    init_data_file(&datafilep, &param);
+
+    init_data_file(&datafilepev, &param,"pev");
+    init_data_file(&datafilepodd, &param,"podd");
+    init_data_file(&datafilegev, &param,"gev");
+    init_data_file(&datafilegodd, &param,"godd");
+    init_data_file(&datafileplaq, &param,"plaq");
 
     // initialize geometry
     init_geometry(&geo, &param);
@@ -476,11 +485,12 @@ void real_main(char *in_file)
          {
           double plaq;
           plaq=plaquette(&GC,&geo,& param);
-          fprintf(datafilep, "%.12f ", plaq);
+          fwrite(&(double){plaq},sizeof(double),1, datafileplaq);
 
           init_opbasis(&opbasis,&param);
           block_measure_operators(&opbasis,&GC,&geo,&param);
-          measure_print_corr_all(&opbasis,&param,datafilep);
+          measure_print_corr_all(&opbasis,&param,
+                datafilepev,datafilepodd,datafilegev,datafilegodd);
          }
 
        // save configuration for backup
@@ -505,7 +515,11 @@ void real_main(char *in_file)
 
 
     // close data file
-    fclose(datafilep);
+    fclose(datafileplaq);
+    fclose(datafilepev);
+    fclose(datafilepodd);
+    fclose(datafilegev);
+    fclose(datafilegodd);
 
     // save configuration
     if(param.d_saveconf_back_every!=0)

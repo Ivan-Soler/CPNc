@@ -65,6 +65,14 @@ void poly_plaq(Conf const * const GC,
       double complex *polyev,
       double complex *polyodd);
 
+void poly_two_plaq(Conf const * const GC,
+      Geometry const * const geo,
+      GParam const * const param,
+      long r,
+      double complex polyline,
+      double complex *polyev,
+      double complex *polyodd);
+
 void poly_averaged(OPbasis *basis,
       Conf const * const GC,
       Geometry const * const geo,
@@ -84,5 +92,8 @@ void measure_print_corr(double complex ** operators,
 
 void measure_print_corr_all(OPbasis *opbasis,
                            GParam const * const param,
-                           FILE * datafilep);
+                           FILE * datafilepev,
+                           FILE * datafilepodd,
+                           FILE * datafilegev,
+                           FILE * datafilegodd);
 #endif

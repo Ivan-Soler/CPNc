@@ -37,7 +37,7 @@ void real_main(char *in_file)
     initrand(param.d_randseed);
 
     // open data_file
-    init_data_file(&datafilep, &param);
+    init_data_file(&datafilep, &param,"a");
 
 
     //for checking the two gauge fixing chain separately
@@ -46,7 +46,7 @@ void real_main(char *in_file)
     strcpy(param2.d_conf_file,strcat(param.d_conf_file,"_r2"));
     strcpy(param2.d_log_file,strcat(param.d_log_file,"_r2"));
     strcpy(param2.d_data_file,strcat(param.d_data_file,"_r2"));
-    init_data_file(&datafilep2, &param2);
+    init_data_file(&datafilep2, &param2,"ab");
 
     // initialize geometry
     init_geometry(&geo, &param);

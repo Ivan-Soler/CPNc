@@ -430,38 +430,39 @@ void init_derived_constants(GParam *param)
 
 
 // initialize data file
-void init_data_file(FILE **dataf, GParam const * const param)
+void init_data_file(FILE **dataf, GParam const * const param, char * fsufix)
   {
   int i;
 
+  char file_name[STD_STRING_LENGTH];
+  snprintf(file_name, sizeof(file_name),fsufix,param->d_data_file);
+
   if(param->d_start==2)
     {
-    *dataf=fopen(param->d_data_file, "r");
+    *dataf=fopen(file_name, "r");
     if(*dataf!=NULL) // file exists
       {
       fclose(*dataf);
-      *dataf=fopen(param->d_data_file, "a");
+      *dataf=fopen(file_name, "a");
       }
     else
       {
-      *dataf=fopen(param->d_data_file, "w");
-      fprintf(*dataf, "%d ", STDIM);
+      *dataf=fopen(file_name, "wb");
+      fwrite(&(int){STDIM}, sizeof(int),1,*dataf);
       for(i=0; i<STDIM; i++)
          {
-         fprintf(*dataf, "%d ", param->d_size[i]);
+         fwrite(&(int){param->d_size[i]},sizeof(int),1,*dataf);
          }
-      fprintf(*dataf, "\n");
       }
     }
   else
     {
-    *dataf=fopen(param->d_data_file, "w");
-    fprintf(*dataf, "%d ", STDIM);
+    *dataf=fopen(file_name, "wb");
+    fwrite(&(int){STDIM}, sizeof(int),1,*dataf);
     for(i=0; i<STDIM; i++)
        {
-       fprintf(*dataf, "%d ", param->d_size[i]);
+       fwrite(&(int){param->d_size[i]},sizeof(int),1,*dataf);
        }
-    fprintf(*dataf, "\n");
     }
   fflush(*dataf);
   }
