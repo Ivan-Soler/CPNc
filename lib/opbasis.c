@@ -262,8 +262,7 @@ void measure_print_corr(double complex ** operators,
            corr += operators[i][t2]*conj(operators[j][t1]);
            }
         corr/=(double) param->d_size[0];
-        fwrite(&(double){creal(corr)},sizeof(double),1,datafilep);
-        fwrite(&(double){cimag(corr)},sizeof(double),1,datafilep);
+        fprintf(datafilep, "%.12f %.12f ", creal(corr), cimag(corr));
         }
    fprintf(datafilep, "\n");
    fflush(datafilep);

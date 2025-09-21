@@ -435,7 +435,8 @@ void init_data_file(FILE **dataf, GParam const * const param, char * fsufix)
   int i;
 
   char file_name[STD_STRING_LENGTH];
-  snprintf(file_name, sizeof(file_name),fsufix,param->d_data_file);
+
+  snprintf(file_name, sizeof(file_name),"%s%s",param->d_data_file,fsufix);
 
   if(param->d_start==2)
     {
@@ -447,22 +448,24 @@ void init_data_file(FILE **dataf, GParam const * const param, char * fsufix)
       }
     else
       {
-      *dataf=fopen(file_name, "wb");
-      fwrite(&(int){STDIM}, sizeof(int),1,*dataf);
+      *dataf=fopen(file_name, "w");
+      fprintf(*dataf, "%d ", STDIM);
       for(i=0; i<STDIM; i++)
          {
-         fwrite(&(int){param->d_size[i]},sizeof(int),1,*dataf);
+         fprintf(*dataf, "%d ", param->d_size[i]);
          }
+      fprintf(*dataf, "\n");
       }
     }
   else
     {
-    *dataf=fopen(file_name, "wb");
-    fwrite(&(int){STDIM}, sizeof(int),1,*dataf);
+    *dataf=fopen(file_name, "w");
+    fprintf(*dataf, "%d ", STDIM);
     for(i=0; i<STDIM; i++)
        {
-       fwrite(&(int){param->d_size[i]},sizeof(int),1,*dataf);
+       fprintf(*dataf, "%d ", param->d_size[i]);
        }
+    fprintf(*dataf, "\n");
     }
   fflush(*dataf);
   }
