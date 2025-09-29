@@ -485,7 +485,7 @@ void real_main(char *in_file)
          {
           double plaq;
           plaq=plaquette(&GC,&geo,& param);
-          fwrite(&(double){plaq},sizeof(double),1, datafileplaq);
+          fprintf(datafileplaq, "%.12f \n", plaq);
 
           init_opbasis(&opbasis,&param);
           block_measure_operators(&opbasis,&GC,&geo,&param);

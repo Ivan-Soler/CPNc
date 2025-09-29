@@ -59,8 +59,8 @@ void free_op(OPerator operator,
 void decl_opbasis(OPbasis *opbasis,
       GParam const * const param)
 {
-   opbasis->polev=3;
-   opbasis->polodd=2;
+   opbasis->polev=2;
+   opbasis->polodd=1;
    opbasis->glueev=1;
    opbasis->glueodd=1;
 
@@ -176,12 +176,11 @@ void poly_averaged(OPbasis *basis,
 
 
    int i,t;
-   long r,r2;
-   r=0;
+   long r2;
    r2=0;
    for(t=0; t<param->d_size[0]; t++)
       {
-      //Operators 3
+
       tmp_polyline=polyline=polyev=polyodd=0;
       for(i=0; i<param->d_size[2]; i++)
          {
@@ -194,20 +193,7 @@ void poly_averaged(OPbasis *basis,
       basis->Poly_ev[basis->polev*level+1][t]=polyev/param->d_size[2];
       basis->Poly_odd[basis->polodd*level][t]=polyodd/param->d_size[2];
 
-      // Operators 4
-      tmp_polyline=polyline=polyev=polyodd=0;
-      for(i=0; i<param->d_size[2]; i++)
-         {
-         tmp_polyline=poly_line(GC,geo,param,r2);
-         poly_plaq(GC,geo,param,r2,tmp_polyline,&polyev,&polyodd);
-         polyline+=tmp_polyline;
-         r2=nnp(geo,r2,2);
-         }
-
-      r=nnp(geo,r,0);
-      r2=r;
-      }
-
+   }
    }
 
 void glueball_averaged(OPbasis *basis,
@@ -268,6 +254,27 @@ void measure_print_corr(double complex ** operators,
    fflush(datafilep);
    }
 
+void measure_print_corr_vacuum(double complex ** operators,
+      GParam const * const param,
+      FILE * datafilep,
+      int nops)
+   {
+   int t;
+   int i;
+   double complex vacuum;
+   for(i=0; i<nops; i++)
+      {
+      vacuum = 0.0;
+      for(t = 0; t<param->d_size[0]; t++)
+        {
+           vacuum += operators[i][t];
+        }
+      vacuum/=(double) param->d_size[0];
+      fprintf(datafilep, "%.12f %.12f ", creal(vacuum), cimag(vacuum));
+      }
+   measure_print_corr(operators,param,datafilep,nops);
+   }
+
 void measure_print_corr_all(OPbasis *opbasis,
                            GParam const * const param,
                            FILE * datafilepev,
@@ -275,10 +282,10 @@ void measure_print_corr_all(OPbasis *opbasis,
                            FILE * datafilegev,
                            FILE * datafilegodd)
    {
-   measure_print_corr(opbasis->Poly_ev,param,datafilepev,opbasis->n_polev);
-   measure_print_corr(opbasis->Poly_odd,param,datafilepodd,opbasis->n_polodd);
-   measure_print_corr(opbasis->Glue_ev,param,datafilegev,opbasis->n_glueev);
-   measure_print_corr(opbasis->Glue_odd,param,datafilegodd,opbasis->n_glueodd);
+   measure_print_corr_vacuum(opbasis->Poly_ev,param,datafilepev,opbasis->n_polev);
+   measure_print_corr_vacuum(opbasis->Poly_odd,param,datafilepodd,opbasis->n_polodd);
+   measure_print_corr_vacuum(opbasis->Glue_ev,param,datafilegev,opbasis->n_glueev);
+   measure_print_corr_vacuum(opbasis->Glue_odd,param,datafilegodd,opbasis->n_glueodd);
    }
 
 #endif

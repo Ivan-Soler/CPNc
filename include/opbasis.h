@@ -90,10 +90,17 @@ void measure_print_corr(double complex ** operators,
       FILE * datafilep,
       int nops);
 
+void measure_print_corr_vacuum(double complex ** operators,
+      GParam const * const param,
+      FILE * datafilep,
+      int nops);
+
 void measure_print_corr_all(OPbasis *opbasis,
                            GParam const * const param,
                            FILE * datafilepev,
                            FILE * datafilepodd,
                            FILE * datafilegev,
                            FILE * datafilegodd);
+
+
 #endif
