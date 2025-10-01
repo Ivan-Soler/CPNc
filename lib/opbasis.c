@@ -176,11 +176,12 @@ void poly_averaged(OPbasis *basis,
 
 
    int i,t;
-   long r2;
+   long r,r2;
+   r=0;
    r2=0;
    for(t=0; t<param->d_size[0]; t++)
       {
-
+	r2=r;
       tmp_polyline=polyline=polyev=polyodd=0;
       for(i=0; i<param->d_size[2]; i++)
          {
@@ -192,7 +193,7 @@ void poly_averaged(OPbasis *basis,
       basis->Poly_ev[basis->polev*level][t]=polyline/param->d_size[2];
       basis->Poly_ev[basis->polev*level+1][t]=polyev/param->d_size[2];
       basis->Poly_odd[basis->polodd*level][t]=polyodd/param->d_size[2];
-
+	r=nnp(geo,r,0);
    }
    }
 
