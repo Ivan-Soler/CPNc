@@ -405,6 +405,7 @@ void real_main(char *in_file)
     FILE *datafilegev;
     FILE *datafilegodd;
     FILE *datafileplaq;
+    FILE *datafilemon;
 
     time_t time1, time2;
     double acc_link, acc_site, acc_link_big;
@@ -422,6 +423,7 @@ void real_main(char *in_file)
     init_data_file(&datafilegev, &param,"gev");
     init_data_file(&datafilegodd, &param,"godd");
     init_data_file(&datafileplaq, &param,"plaq");
+    init_data_file(&datafilemon, &param,"mon");
 
     // initialize geometry
     init_geometry(&geo, &param);
@@ -484,8 +486,11 @@ void real_main(char *in_file)
        if(count % param.d_measevery ==0 && count > param.d_thermal)
          {
           double plaq;
+          long monopoles;
           plaq=plaquette(&GC,&geo,& param);
+          monopoles=measure_monopoles(&GC,&geo,&param);
           fprintf(datafileplaq, "%.12f \n", plaq);
+          fprintf(datafilemon, "%.ld \n", monopoles);
 
           init_opbasis(&opbasis,&param);
           block_measure_operators(&opbasis,&GC,&geo,&param);
