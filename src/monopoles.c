@@ -491,6 +491,8 @@ void real_main(char *in_file)
           monopoles=measure_monopoles(&GC,&geo,&param);
           fprintf(datafileplaq, "%.12f \n", plaq);
           fprintf(datafilemon, "%.ld \n", monopoles);
+          fflush(datafileplaq);
+          fflush(datafilemon);
 
           init_opbasis(&opbasis,&param);
           block_measure_operators(&opbasis,&GC,&geo,&param);
