@@ -340,10 +340,6 @@ void block_measure_operators(OPbasis *opbasis,
       blockparam2=blockparam;
       copy_gauge_conf(&blockGC2,&blockGC,&blockparam);
       init_geometry(&blockgeo2, &blockparam2);
-   }
-     
-
-   free_conf_gauge(&SmearedGC,param);  
 
    int j,k;
    for(j=0; j<param->numblock; j++)
@@ -390,6 +386,8 @@ void block_measure_operators(OPbasis *opbasis,
       //Delete the copy
        free_conf_gauge(&blockGC, &blockparam);
        free_geometry(&blockgeo, &blockparam);
+   }
+   free_conf_gauge(&SmearedGC,param);
 }
 
 
