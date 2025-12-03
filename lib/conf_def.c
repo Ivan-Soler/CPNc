@@ -320,12 +320,12 @@ void read_conf(Conf *GC, GParam const * const param)
 
     for(r=0; r<param->d_volume; r++)
        {
-       err=read_from_binary_file_bigen_Vec(fp, &(GC->phi[r]));
-       if(err!=0)
-            {
-            fprintf(stderr, "Error in reading the file %s (%s, %d)\n", param->d_conf_file, __FILE__, __LINE__);
-            exit(EXIT_FAILURE);
-            }
+       //err=read_from_binary_file_bigen_Vec(fp, &(GC->phi[r]));
+       //if(err!=0)
+            //{
+            //fprintf(stderr, "Error in reading the file %s (%s, %d)\n", param->d_conf_file, __FILE__, __LINE__);
+            //exit(EXIT_FAILURE);
+            //}
 
        for(mu=0; mu<STDIM; mu++)
           {
@@ -488,12 +488,12 @@ void write_conf_on_file_with_name(Conf const * const GC,
     {
     for(r=0; r<param->d_volume; r++)
        {
-       err=print_on_binary_file_bigen_Vec(fp, &(GC->phi[r]) );
-       if(err!=0)
-         {
-         fprintf(stderr, "Error in writing the file %s (%s, %d)\n", namefile, __FILE__, __LINE__);
-         exit(EXIT_FAILURE);
-         }
+       //err=print_on_binary_file_bigen_Vec(fp, &(GC->phi[r]) );
+       //if(err!=0)
+         //{
+         //fprintf(stderr, "Error in writing the file %s (%s, %d)\n", namefile, __FILE__, __LINE__);
+         //exit(EXIT_FAILURE);
+         //}
 
        for(mu=0; mu<STDIM; mu++)
           {
@@ -512,9 +512,32 @@ void write_conf_on_file_with_name(Conf const * const GC,
 
 void write_conf_on_file(Conf const * const GC, GParam const * const param)
   {
-  write_conf_on_file_with_name(GC, param, param->d_conf_file);
+  char filename[STD_STRING_LENGTH];
+  snprintf(filename, STD_STRING_LENGTH, "%.30s_%ld",
+           param->d_conf_file, GC->update_index);
+  write_conf_on_file_with_name(GC, param, filename);
   }
 
+void print_elements(Conf *GC, GParam const * const param)
+   {
+   long r;
+   int mu;
+   int cartcoord[STDIM];
+   FILE *datafileelem;
+   init_data_file(&datafileelem, param,"test");
+   for(r=0; r<param->d_volume; r++)
+          {
+          lex_to_cart(cartcoord, r, param);
+          for(mu=0; mu<STDIM; mu++)
+             {
+             fprintf(datafileelem, "%.12f %.12f %.4f %d %ld %d %d %d \n", creal(GC->lambda[r][mu]),cimag(GC->lambda[r][mu]),
+                   creal(GC->lambda[r][mu])*creal(GC->lambda[r][mu])+cimag(GC->lambda[r][mu])*cimag(GC->lambda[r][mu])
+      ,mu,r,cartcoord[0],cartcoord[1],cartcoord[2]);
+             fflush(datafileelem);
+             }
+          }
+       fclose(datafileelem);
+   }
 
 void write_conf_on_file_back(Conf const * const GC, GParam const * const param)
   {
@@ -550,19 +573,19 @@ void compute_md5sum_conf(char *res, Conf const * const GC, GParam const * const 
   MD5_Init(&mdContext);
   for(r=0; r<param->d_volume; r++)
      {
-     for(k=0; k<NFLAVOUR; k++)
-        {
-        a=creal((GC->phi[r]).comp[k]);
-        b=cimag((GC->phi[r]).comp[k]);
+     //for(k=0; k<NFLAVOUR; k++)
+        //{
+        //a=creal((GC->phi[r]).comp[k]);
+        //b=cimag((GC->phi[r]).comp[k]);
 
-        if(endian()==0) // little endian
-          {
-          SwapBytesDouble(&a);
-          SwapBytesDouble(&b);
-          }
-        MD5_Update(&mdContext, &a, sizeof(double));
-        MD5_Update(&mdContext, &b, sizeof(double));
-        }
+        //if(endian()==0) // little endian
+          //{
+          //SwapBytesDouble(&a);
+          //SwapBytesDouble(&b);
+          //}
+        //MD5_Update(&mdContext, &a, sizeof(double));
+        //MD5_Update(&mdContext, &b, sizeof(double));
+        //}
 
      for(mu=0; mu<STDIM; mu++)
         {

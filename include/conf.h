@@ -80,6 +80,7 @@ void write_conf_on_file(Conf const * const GC,
                         GParam const * const param);
 void write_conf_on_file_back(Conf const * const GC,
                              GParam const * const param);
+void print_elements(Conf *GC, GParam const * const param);
 void compute_md5sum_conf(char *res,        // the lenght is 2*MD5_DIGEST_LENGTH
                          Conf const * const GC,
                          GParam const * const param);
@@ -161,6 +162,12 @@ double complex plaquette_complex(Conf const * const GC,
                         int i,
                         int j);
 double plaquette(Conf const * const GC,
+                 Geometry const * const geo,
+                 GParam const * const param);
+double plaquette_spatial(Conf const * const GC,
+                 Geometry const * const geo,
+                 GParam const * const param);
+double plaquette_temporal(Conf const * const GC,
                  Geometry const * const geo,
                  GParam const * const param);
 double higgs_interaction(Conf const * const GC,

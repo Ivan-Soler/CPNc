@@ -148,6 +148,33 @@ double plaquette_spatial(Conf const * const GC,
       }
 
    ris*=param->d_inv_vol;
+   ris/=((double) (STDIM-1)*((double) STDIM-2.0)/2.0);
+
+   return ris;
+   }
+
+double plaquette_temporal(Conf const * const GC,
+                 Geometry const * const geo,
+                 GParam const * const param)
+   {
+   long r;
+   double ris=0.0;
+
+   for(r=0; r<(param->d_volume); r++)
+      {
+      double tmp;
+      int j;
+      tmp=0.0;
+
+      for(j=1; j<STDIM; j++)
+         {
+         tmp+=plaquette_single(GC, geo, r, 0, j);
+         }
+      ris+=tmp;
+      }
+
+   ris*=param->d_inv_vol;
+   ris/=((double) (STDIM-1));
 
    return ris;
    }

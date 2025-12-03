@@ -483,11 +483,16 @@ void real_main(char *in_file)
 
        if(count % param.d_measevery ==0 && count > param.d_thermal)
          {
-          double plaq;
+          double plaq, plaq_spatial,plaq_temporal;
           long monopoles;
+          plaq=0;
+          plaq_spatial=0;
+          plaq_temporal=0;
           plaq=plaquette(&GC,&geo,& param);
+          plaq_spatial=plaquette_spatial(&GC,&geo,& param);
+          plaq_temporal=plaquette_temporal(&GC,&geo,& param);
           monopoles=measure_monopoles(&GC,&geo,&param);
-          fprintf(datafileplaq, "%.12f \n", plaq);
+          fprintf(datafileplaq, "%.12f %.12f %.12f\n", plaq, plaq_spatial, plaq_temporal);
           fprintf(datafilemon, "%.ld \n", monopoles);
           fflush(datafileplaq);
           fflush(datafilemon);
@@ -517,7 +522,22 @@ void real_main(char *in_file)
     acc_link/=(double)(param.d_sample-param.d_thermal);
     acc_link_big/=(double)(param.d_sample-param.d_thermal);
 
-
+    if (param.d_sample==0)
+       {
+       double plaq, plaq_spatial, plaq_temporal;
+       plaq=0;
+       plaq_spatial=0;
+       plaq_temporal=0;
+       long monopoles;
+       plaq=plaquette(&GC,&geo,& param);
+       plaq_spatial=plaquette_spatial(&GC,&geo,& param);
+       plaq_temporal=plaquette_temporal(&GC,&geo,& param);
+       monopoles=measure_monopoles(&GC,&geo,&param);
+       fprintf(datafileplaq, "%.12f %.12f %.12f\n", plaq, plaq_spatial, plaq_temporal);
+       fprintf(datafilemon, "%.ld \n", monopoles);
+       fflush(datafileplaq);
+       fflush(datafilemon);
+       }
 
     // close data file
     fclose(datafileplaq);
@@ -525,6 +545,7 @@ void real_main(char *in_file)
     fclose(datafilepodd);
     fclose(datafilegev);
     fclose(datafilegodd);
+    print_elements(&GC,&param);
 
     // save configuration
     if(param.d_saveconf_back_every!=0)
