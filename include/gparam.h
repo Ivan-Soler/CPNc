@@ -24,6 +24,7 @@ typedef struct GParam {
   int d_measevery;
   // initialization & saving
   int d_start;
+  int d_saveconf_every;
   int d_saveconf_back_every;
 
   // for metropolis

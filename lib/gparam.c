@@ -310,6 +310,16 @@ void readinput(char *in_file, GParam *param)
                     }
                   param->d_saveconf_back_every=temp_i;
                   }
+           else if(strncmp(str, "saveconf_every", 14)==0)
+                 {
+                 err=fscanf(input, "%d", &temp_i);
+                 if(err!=1)
+                   {
+                   fprintf(stderr, "Error in reading the file %s (%s, %d)\n", in_file, __FILE__, __LINE__);
+                   exit(EXIT_FAILURE);
+                   }
+                 param->d_saveconf_every=temp_i;
+                 }
 
            else if(strncmp(str, "epsilon_metro_link", 18)==0)
                   {

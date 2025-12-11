@@ -282,7 +282,8 @@ int metropolis_for_link(Conf *GC,
   {
   double old_energy, new_energy;
   double complex old_lambda, new_lambda;
-  double complex sc, pstaple;
+  double complex pstaple;
+  //double complex sc,
   int new_charges[4];
   int acc=0;
 
@@ -301,7 +302,7 @@ int metropolis_for_link(Conf *GC,
     equal_Vec(&v1, &(GC->phi[nnp(geo,r,i)]));
   #endif
 
-  sc=scal_prod_Vec(&(GC->phi[r]), &v1);
+  //sc=scal_prod_Vec(&(GC->phi[r]), &v1);
 
   old_lambda=GC->lambda[r][i];
 
@@ -314,14 +315,14 @@ int metropolis_for_link(Conf *GC,
     pstaple=0.0;
     }
 
-  old_energy =-2.0*(double)NFLAVOUR*(param->d_J)*creal(sc*chargepow(old_lambda) );
-  old_energy-=2.0*param->d_K*creal(old_lambda*pstaple);
+ // old_energy =-2.0*(double)NFLAVOUR*(param->d_J)*creal(sc*chargepow(old_lambda) );
+  old_energy=-2.0*param->d_K*creal(old_lambda*pstaple);
   old_energy-= param->d_masssq * creal(old_lambda);
 
   new_lambda = old_lambda*cexp(I*param->d_epsilon_metro_link*(2.0*casuale()-1));
 
-  new_energy=-2.0*(double)NFLAVOUR*(param->d_J)*creal(sc*chargepow(new_lambda) );
-  new_energy-=2.0*param->d_K*creal(new_lambda*pstaple);
+  //new_energy=-2.0*(double)NFLAVOUR*(param->d_J)*creal(sc*chargepow(new_lambda) );
+  new_energy=-2.0*param->d_K*creal(new_lambda*pstaple);
   new_energy-= param->d_masssq * creal(new_lambda);
 
   new_energy-= param->d_chemical * (double) local_action_monopoles(GC,geo,r,i,carg(new_lambda),new_charges);
@@ -332,16 +333,16 @@ int metropolis_for_link(Conf *GC,
   charges_tmp= local_action_monopoles(GC,geo,r,i,carg(new_lambda),new_charges);
 
   GC->lambda[r][i] = new_lambda;
-  new_energy_aux = -2.0 * (double)NFLAVOUR *(param->d_J)*higgs_interaction(GC, geo, param)*(double)STDIM * (double)param->d_volume;
-  new_energy_aux -= 2.0 * (param->d_K)*plaquette(GC, geo, param)*(double)STDIM*((double)STDIM-1.0)/2.0 *(double) param->d_volume;
+  //new_energy_aux = -2.0 * (double)NFLAVOUR *(param->d_J)*higgs_interaction(GC, geo, param)*(double)STDIM * (double)param->d_volume;
+  new_energy_aux = -2.0 * (param->d_K)*plaquette(GC, geo, param)*(double)STDIM*((double)STDIM-1.0)/2.0 *(double) param->d_volume;
   new_energy_aux -= param->d_masssq *creal(new_lambda);
   long charges_new;
   charges_new= measure_monopoles(GC,geo,param);
   new_energy_aux -= param->d_chemical* (double) charges_new;
 
   GC->lambda[r][i] = old_lambda;
-  old_energy_aux = -2.0 * (double)NFLAVOUR *(param->d_J)*higgs_interaction(GC, geo, param)*(double)STDIM * (double)param->d_volume;
-  old_energy_aux -= 2.0 * (param->d_K)*plaquette(GC, geo, param)*(double)STDIM*((double)STDIM-1.0)/2.0 *(double) param->d_volume;
+  //old_energy_aux = -2.0 * (double)NFLAVOUR *(param->d_J)*higgs_interaction(GC, geo, param)*(double)STDIM * (double)param->d_volume;
+  old_energy_aux = -2.0 * (param->d_K)*plaquette(GC, geo, param)*(double)STDIM*((double)STDIM-1.0)/2.0 *(double) param->d_volume;
   old_energy_aux -= param->d_masssq * creal(old_lambda);
   long charges_old;
   charges_old= measure_monopoles(GC,geo,param);
@@ -560,8 +561,10 @@ void update(Conf * GC,
             double *acc_link_big)
 
    {
-   long r, asum_site, asum_link, asum_link_big;
-   int j, dir;
+   long r, asum_link, asum_link_big;
+   //long asum_site;
+   int dir;
+   //int j;
    double complex norm;
 
    // metropolis on links
@@ -603,27 +606,28 @@ void update(Conf * GC,
    *acc_link_big/=(double)(STDIM-1);
    #endif
 
+   *acc_site=0;
    // metropolis on phi
-   asum_site=0;
-   for(r=0; r<param->d_volume; r++)
-      {
-      asum_site+=metropolis_for_phi(GC, geo, param, r);
-      }
-   *acc_site=((double)asum_site)*param->d_inv_vol;
+   //asum_site=0;
+   //for(r=0; r<param->d_volume; r++)
+   //   {
+   //   asum_site+=metropolis_for_phi(GC, geo, param, r);
+   //   }
+   //*acc_site=((double)asum_site)*param->d_inv_vol;
 
    // overrelax on phi
-   for(j=0; j<param->d_overrelax; j++)
-      {
-      for(r=0; r<(param->d_volume); r++)
-         {
-         overrelaxation_for_phi(GC, geo, r);
-         }
-      }
+   //for(j=0; j<param->d_overrelax; j++)
+   //   {
+   //   for(r=0; r<(param->d_volume); r++)
+   //      {
+   //      overrelaxation_for_phi(GC, geo, r);
+   //      }
+   //   }
 
    // final unitarization
    for(r=0; r<(param->d_volume); r++)
       {
-      unitarize_Vec(&(GC->phi[r]));
+      //unitarize_Vec(&(GC->phi[r]));
       for(dir=0; dir<STDIM; dir++)
          {
          norm=cabs(GC->lambda[r][dir]);

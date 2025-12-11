@@ -503,13 +503,25 @@ void real_main(char *in_file)
                 datafilepev,datafilepodd,datafilegev,datafilegodd);
          }
 
+       // save configuration files
+       if(param.d_saveconf_every!=0)
+          {
+          if(count % param.d_saveconf_every == 0 )
+            {
+             char filename[STD_STRING_LENGTH];
+             snprintf(filename, STD_STRING_LENGTH, "%.30s_%ld",
+                      param.d_conf_file, GC.update_index);
+            write_conf_on_file_with_name(&GC, &param,filename);
+            }
+          }
+
        // save configuration for backup
        if(param.d_saveconf_back_every!=0)
          {
          if(count % param.d_saveconf_back_every == 0 )
            {
            // simple
-           write_conf_on_file(&GC, &param);
+            write_conf_on_file(&GC, &param);
 
            // backup copy
            write_conf_on_file_back(&GC, &param);

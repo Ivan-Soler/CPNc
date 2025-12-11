@@ -512,10 +512,7 @@ void write_conf_on_file_with_name(Conf const * const GC,
 
 void write_conf_on_file(Conf const * const GC, GParam const * const param)
   {
-  char filename[STD_STRING_LENGTH];
-  snprintf(filename, STD_STRING_LENGTH, "%.30s_%ld",
-           param->d_conf_file, GC->update_index);
-  write_conf_on_file_with_name(GC, param, filename);
+  write_conf_on_file_with_name(GC, param, param->d_conf_file);
   }
 
 void print_elements(Conf *GC, GParam const * const param)
