@@ -488,12 +488,13 @@ void real_main(char *in_file)
           plaq=0;
           plaq_spatial=0;
           plaq_temporal=0;
+          monopoles=0;
           plaq=plaquette(&GC,&geo,& param);
           plaq_spatial=plaquette_spatial(&GC,&geo,& param);
           plaq_temporal=plaquette_temporal(&GC,&geo,& param);
           monopoles=measure_monopoles(&GC,&geo,&param);
           fprintf(datafileplaq, "%.12f %.12f %.12f\n", plaq, plaq_spatial, plaq_temporal);
-          fprintf(datafilemon, "%.ld \n", monopoles);
+          fprintf(datafilemon, "%ld \n", monopoles);
           fflush(datafileplaq);
           fflush(datafilemon);
 
