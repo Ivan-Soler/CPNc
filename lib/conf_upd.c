@@ -121,6 +121,45 @@ int metropolis_for_phi(Conf *GC,
   return acc;
   }
 
+//Perform an overrelaxation step for the link with a metropolis step on the monopoles
+int overrelaxation_for_link(Conf *GC,
+                            GParam const * const param,
+                            Geometry const * const geo,
+                            long r,
+                            int dir)
+
+   {
+   double complex pstaple,normstaple,new_lambda,old_lambda;
+   double delta_energy;
+   int new_charges[4];
+   int acc;
+
+   old_lambda=GC->lambda[r][dir];
+   pstaple=plaqstaples_for_link(GC, geo, r,dir);
+   normstaple=conj(pstaple)/cabs(pstaple);
+   new_lambda=conj(old_lambda)*normstaple*normstaple;
+
+   delta_energy=- param->d_chemical * (double) local_action_monopoles(GC,geo,r,dir,carg(new_lambda),new_charges);
+
+     if(0>delta_energy)
+       {
+       GC->lambda[r][dir] = new_lambda;
+       update_charge(GC,geo,new_charges,r,dir);
+       acc=1;
+
+       }
+     else if(casuale()< exp(-delta_energy) )
+         {
+         GC->lambda[r][dir] = new_lambda;
+         update_charge(GC,geo,new_charges,r,dir);
+         acc=1;
+         }
+     else
+        {
+        acc=0;
+        }
+     return acc;
+     }
 
 // perform an update of the phi field with overrelaxation
 void overrelaxation_for_phi(Conf *GC,
@@ -558,18 +597,21 @@ void update(Conf * GC,
             GParam const * const param,
             double *acc_site,
             double *acc_link,
-            double *acc_link_big)
+            double *acc_link_big,
+            double *acc_link_over)
 
    {
-   long r, asum_link, asum_link_big;
+   long r, asum_link, asum_link_big,asum_link_over;
    //long asum_site;
    int dir;
-   //int j;
+   int j;
    double complex norm;
 
    // metropolis on links
    asum_link=0;
    asum_link_big=0;
+   asum_link_over=0;
+
    #ifndef LINKS_FIXED_TO_ONE
      #ifndef TEMPORAL_GAUGE
      for(r=0; r<param->d_volume; r++)
@@ -606,6 +648,19 @@ void update(Conf * GC,
    *acc_link_big/=(double)(STDIM-1);
    #endif
 
+   for(j=0; j<param->d_overrelax; j++)
+         {
+         for(r=0; r<(param->d_volume); r++)
+            {
+            for(dir=0; dir<STDIM; dir++)
+               {
+               asum_link_over+=overrelaxation_for_link(GC, param,geo, r,dir);
+               }
+            }
+         }
+   *acc_link_over=((double)asum_link_over)*param->d_inv_vol;
+   *acc_link_over/=(double)STDIM;
+   *acc_link_over/=param->d_overrelax;
    *acc_site=0;
    // metropolis on phi
    //asum_site=0;

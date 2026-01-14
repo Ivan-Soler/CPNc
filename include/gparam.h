@@ -71,6 +71,7 @@ void print_parameters(GParam const * const param,
                       double acc_site,
                       double acc_link,
                       double acc_link_big,
+                      double acc_link_over,
 					  double quench_acc);
 
 #endif

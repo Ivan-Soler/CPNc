@@ -98,6 +98,11 @@ int metropolis_for_phi(Conf *GC,
                        Geometry const * const geo,
                        GParam const * const param,
                        long r);
+int overrelaxation_for_link(Conf *GC,
+                            GParam const * const param,
+                            Geometry const * const geo,
+                            long r,
+                            int dir);
 void overrelaxation_for_phi(Conf *GC,
                             Geometry const * const geo,
                             long r);
@@ -137,7 +142,8 @@ void update(Conf * GC,
             GParam const * const param,
             double *acc_site,
             double *acc_link,
-            double *acc_link_big);
+            double *acc_link_big,
+            double *acc_link_over);
 void gauge_apply(Conf *GC,
                  Geometry const * const geo,
                  GParam const * const param);

@@ -29,6 +29,7 @@ void real_main(char *in_file)
     time_t time1, time2;
     double acc_link, acc_site, acc_link_big;
     double acc_link_local, acc_site_local, acc_link_big_local;
+    double acc_link_over;
     double quench_acc=0.0;
     // read input file
     readinput(in_file, &param);
@@ -65,7 +66,7 @@ void real_main(char *in_file)
     // count starts from 1 to avoid problems using %
     for(count=1; count < param.d_sample + 1; count++)
        {
-       update(&GC, &geo, &param, &acc_site_local, &acc_link_local, &acc_link_big_local);
+       update(&GC, &geo, &param, &acc_site_local, &acc_link_local, &acc_link_big_local, &acc_link_over);
        if(count>param.d_thermal)
          {
          acc_site+=acc_site_local;
@@ -146,7 +147,7 @@ void real_main(char *in_file)
     //		fprintf(stderr, "%d \t %d \t %.4f \n", r, i, creal(GC.lambda[r][i]));
     //}
     // print simulation details
-    print_parameters(&param, time1, time2, acc_site, acc_link, acc_link_big,quench_acc);
+    print_parameters(&param, time1, time2, acc_site, acc_link, acc_link_big,0,quench_acc);
 
     // free configuration
     free_conf(&GC, &param);

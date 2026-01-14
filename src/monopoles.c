@@ -406,8 +406,8 @@ void real_main(char *in_file)
     FILE *datafilemon;
 
     time_t time1, time2;
-    double acc_link, acc_site, acc_link_big;
-    double acc_link_local, acc_site_local, acc_link_big_local;
+    double acc_link, acc_site, acc_link_big, acc_link_over;
+    double acc_link_local, acc_site_local, acc_link_big_local, acc_link_over_local;
     // read input file
     readinput(in_file, &param);
 
@@ -432,6 +432,7 @@ void real_main(char *in_file)
     // acceptance
     acc_link=0.0;
     acc_link_big=0.0;
+    acc_link_over=0.0;
     acc_site=0.0;
 
     // montecarlo
@@ -443,12 +444,13 @@ void real_main(char *in_file)
 
     for(count=1; count < param.d_sample + 1; count++)
        {
-       update(&GC, &geo, &param, &acc_site_local, &acc_link_local, &acc_link_big_local);
+       update(&GC, &geo, &param, &acc_site_local, &acc_link_local, &acc_link_big_local, &acc_link_over_local);
        if(count>param.d_thermal)
          {
          acc_site+=acc_site_local;
          acc_link+=acc_link_local;
          acc_link_big+=acc_link_big_local;
+         acc_link_over+=acc_link_over_local;
          }
 
        if(count<param.d_thermal)
@@ -534,6 +536,7 @@ void real_main(char *in_file)
     acc_site/=(double)(param.d_sample-param.d_thermal);
     acc_link/=(double)(param.d_sample-param.d_thermal);
     acc_link_big/=(double)(param.d_sample-param.d_thermal);
+    acc_link_over/=(double)(param.d_sample-param.d_thermal);
 
     if (param.d_sample==0)
        {
@@ -566,7 +569,7 @@ void real_main(char *in_file)
       write_conf_on_file(&GC, &param);
       }
 
-    print_parameters(&param, time1, time2, acc_site, acc_link, acc_link_big,0);
+    print_parameters(&param, time1, time2, acc_site, acc_link, acc_link_big,acc_link_over,0);
 
 
     // free configuration

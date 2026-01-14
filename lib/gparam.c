@@ -488,6 +488,7 @@ void print_parameters(GParam const * const param,
                       double acc_site,
                       double acc_link,
                       double acc_link_big,
+                      double acc_link_over,
 					  double quench_acc)
 
     {
@@ -563,6 +564,7 @@ void print_parameters(GParam const * const param,
     fprintf(fp, "epsilon_metro_link: %.10lf\n", param->d_epsilon_metro_link);
     fprintf(fp, "metropolis acceptance link: %.10lf\n", acc_link);
     fprintf(fp, "metropolis acceptance link big: %.10lf\n", acc_link_big);
+    fprintf(fp, "overrelaxation acceptance link over: %.10lf\n", acc_link_over);
     fprintf(fp, "\n");
 
 	#ifdef GAUGE_FIX
