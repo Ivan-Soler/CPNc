@@ -1,3 +1,21 @@
+******************************************************************************
+***************************** ABOUT THIS FORK ********************************
+******************************************************************************
+This repository is a fork of the original CPNc simulation codebase and
+is pinned to the version I worked on during the late stage of my postdoctoral 
+research.
+
+My contributions focused on:
+
+    A nested Monte-Carlo scheme mimicking spin-glasses models relevant for 
+    stochastic gauge fixing
+    
+    Added De-Grand Thoussaint method for counting monopoles and add them 
+    dynamichally thourgh the chemical potential
+
+    Blocking and smearing in order to create basis of polyakov operators
+    to pose a GEVP
+
 *********************************************************************
 ********* PROGRAM FOR SIMULATION OF LATTICE CP^(N-1) MODELS *********
 *******************   WITH COMPACT U(1) GAUGE  **********************
